@@ -351,6 +351,13 @@ namespace MinorShift.Emuera.Forms
 		static int BottomOverflowMargin => Math.Max(Runtime.Config.Config.LineHeight / 2, 6);
 
 		/// <summary>
+		/// オフスクリーン描画の倍率。論理サイズ (MainPicBox) は変えずに、
+		/// ビットマップだけ 2 倍で確保して描画時に拡大する。
+		/// レイアウト (1 行の文字数・行数) を崩さずに文字だけ鮮明にできる。
+		/// </summary>
+		public int RenderScale { get; set; } = 1;
+
+		/// <summary>
 		/// 上流の EmueraConsole は「描画時に表示状態を確定する」設計で、
 		/// 表示中のボタンや HTML パーツの一覧 (EscapedParts) は OnPaint の中で作られる。
 		/// BINPUT などの命令はその結果を参照するため、WebView 版でも描画パス自体は走らせる必要がある。
@@ -362,16 +369,19 @@ namespace MinorShift.Emuera.Forms
 				return;
 			int w = Math.Max(MainPicBox.Width, 1);
 			int h = Math.Max(MainPicBox.Height, 1);
+			int scale = Math.Clamp(RenderScale, 1, 3);
 
 			// Emuera は「描画領域の下端」に最新行を置く。emuera.config のフォントサイズが
 			// 行の高さを上回っていると (例: フォント 16px / 行高 17px)、最下行の下側が
 			// 領域からはみ出して欠ける。ビットマップだけ少し高く確保して受け止める。
 			int bufferHeight = h + BottomOverflowMargin;
+			int bitmapWidth = w * scale;
+			int bitmapHeight = bufferHeight * scale;
 
-			if (backBuffer == null || backBuffer.Width != w || backBuffer.Height != bufferHeight)
+			if (backBuffer == null || backBuffer.Width != bitmapWidth || backBuffer.Height != bitmapHeight)
 			{
 				backBuffer?.Dispose();
-				backBuffer = new Bitmap(w, bufferHeight);
+				backBuffer = new Bitmap(bitmapWidth, bitmapHeight);
 				MainPicBox.Image = backBuffer;
 			}
 			painting = true;
@@ -379,6 +389,10 @@ namespace MinorShift.Emuera.Forms
 			try
 			{
 				using var graph = Graphics.FromImage(backBuffer);
+				// 論理座標のまま描かせて、最後にまとめて拡大する。
+				// クリック座標も MainPicBox の論理サイズのままなので変換は要らない
+				if (scale > 1)
+					graph.ScaleTransform(scale, scale);
 				Console.OnPaint(graph);
 				System.Threading.Interlocked.Increment(ref paintCount);
 				// 描き切ったときだけ落とす。上の早期 return (再入) では落とさない

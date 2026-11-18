@@ -5,14 +5,19 @@ using System.Text.Json;
 
 namespace EraFlow.Storage;
 
-public sealed record GameEntry(string Id, string Name, string Path, int Scripts, int Images, long Bytes, string Source, long LastPlayed = 0);
+public sealed record GameEntry(string Id, string Name, string Path, int Scripts, int Images, long Bytes, string Source, long LastPlayed = 0)
+{
+    /// <summary>直接读取用户原目录的条目（不占应用私有空间）。旧 library.json 可能没有 source，这里做空值保护。</summary>
+    public bool External => Source != null && Source.StartsWith("path:", StringComparison.OrdinalIgnoreCase);
+}
 
 public sealed class GameLibrary
 {
     public string Root { get; }
     public GameLibrary(string root) { Root=System.IO.Path.GetFullPath(root); Directory.CreateDirectory(Root); Encoding.RegisterProvider(CodePagesEncodingProvider.Instance); }
     public List<GameEntry> Games { get; private set; } = [];
-    public void Load() { var path=System.IO.Path.Combine(Root,"library.json"); if(File.Exists(path)) Games=JsonSerializer.Deserialize<List<GameEntry>>(File.ReadAllText(path)) ?? []; Games.RemoveAll(g=>!Directory.Exists(g.Path)); }
+    public void Load() { var path=System.IO.Path.Combine(Root,"library.json"); if(File.Exists(path)) Games=JsonSerializer.Deserialize<List<GameEntry>>(File.ReadAllText(path)) ?? []; // 直读条目在 SD 卡暂时未挂载时不要从库里抹掉；私有副本不存在才清理。
+        Games.RemoveAll(g=>!g.External && !Directory.Exists(g.Path)); }
     public void Save() { var path=System.IO.Path.Combine(Root,"library.json"); File.WriteAllText(path+".tmp",JsonSerializer.Serialize(Games)); File.Move(path+".tmp",path,true); }
     public void Played(string id) { Games=Games.Select(g=>g.Id==id?g with {LastPlayed=DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}:g).ToList(); Save(); }
     public static string Key(string value)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)))[..20].ToLowerInvariant();
@@ -82,11 +87,15 @@ public sealed class GameLibrary
         }
         finally { DeleteInside(stage); }
     }
-    public GameEntry Register(string path,string source,string fallback)
+    public GameEntry Register(string path,string source,string fallback,int scripts=-1,int images=-1,long bytes=-1)
     {
         string id=Key(path); var existing=Games.Find(g=>g.Id==id); if(existing!=null) return existing;
-        var files=Directory.GetFiles(path,"*",SearchOption.AllDirectories); string title=fallback;
-        string? gamebase=files.FirstOrDefault(f=>System.IO.Path.GetFileName(f).Equals("gamebase.csv",StringComparison.OrdinalIgnoreCase));
+        string title=fallback;
+        // EraFlow: gamebase.csv はほぼ必ず csv/ の直下にある。全ファイルを走査して
+        // 探すと数千ファイルのゲームで毎回数百 ms かかるので、まず直下を見る。
+        // 見つからない場合だけ浅い探索に落とす。
+        string? gamebase=System.IO.Path.Combine(path,"csv","gamebase.csv");
+        if(!File.Exists(gamebase)) gamebase=FindGamebase(path,3);
         if(gamebase!=null)
         {
             foreach(var line in File.ReadLines(gamebase,Encoding.UTF8))
@@ -96,8 +105,28 @@ public sealed class GameLibrary
             }
         }
         if(title.Length>100) title=title[..100];
-        var game=new GameEntry(id,title,path,files.Count(f=>f.EndsWith(".erb",StringComparison.OrdinalIgnoreCase)),files.Count(f=>new[]{".png",".jpg",".jpeg",".webp",".gif",".bmp"}.Contains(System.IO.Path.GetExtension(f).ToLowerInvariant())),files.Sum(f=>new FileInfo(f).Length),source);
+        if(scripts<0 || images<0 || bytes<0)
+        {
+            // 呼び出し側が統計を持っていない場合だけ全走査する (旧経路)。
+            var files=Directory.GetFiles(path,"*",SearchOption.AllDirectories);
+            scripts=files.Count(f=>f.EndsWith(".erb",StringComparison.OrdinalIgnoreCase));
+            images=files.Count(f=>new[]{".png",".jpg",".jpeg",".webp",".gif",".bmp"}.Contains(System.IO.Path.GetExtension(f).ToLowerInvariant()));
+            bytes=files.Sum(f=>new FileInfo(f).Length);
+        }
+        var game=new GameEntry(id,title,path,scripts,images,bytes,source);
         Games.Add(game); return game;
+    }
+    static string? FindGamebase(string root,int depth)
+    {
+        if(depth<0) return null;
+        string direct=System.IO.Path.Combine(root,"gamebase.csv");
+        if(File.Exists(direct)) return direct;
+        foreach(var dir in Directory.EnumerateDirectories(root))
+        {
+            if(System.IO.Path.GetFileName(dir).StartsWith('.')) continue;
+            var hit=FindGamebase(dir,depth-1); if(hit!=null) return hit;
+        }
+        return null;
     }
     public void ExportSaves(GameEntry game,Stream output)
     {
@@ -125,15 +154,20 @@ public sealed class GameLibrary
     {
         var game=Games.Find(g=>g.Id==id); if(game==null) return false;
         Games.RemoveAll(g=>g.Id==id);
-        string path=System.IO.Path.GetFullPath(game.Path), prefix=Root+System.IO.Path.DirectorySeparatorChar;
-        bool inside=path.StartsWith(prefix,StringComparison.OrdinalIgnoreCase);
-        if(inside && !Games.Any(g=>Below(g.Path,path))) DeleteInside(path);
+        // 直读游戏的文件属于用户自己的目录，删除条目时绝不能碰它。
+        bool external=game.External;
         string backups=System.IO.Path.Combine(Root,"save-backups");
         if(Directory.Exists(backups)) foreach(var file in Directory.EnumerateFiles(backups,game.Id+"-*.zip")) File.Delete(file);
-        if(inside)
+        if(!external)
         {
-            string package=System.IO.Path.Combine(Root,System.IO.Path.GetRelativePath(Root,path).Split(System.IO.Path.DirectorySeparatorChar)[0]);
-            if(!SamePath(package,Root) && Directory.Exists(package) && !Games.Any(g=>SamePath(g.Path,package)||Below(g.Path,package))) DeleteInside(package);
+            string path=System.IO.Path.GetFullPath(game.Path), prefix=Root+System.IO.Path.DirectorySeparatorChar;
+            bool inside=path.StartsWith(prefix,StringComparison.OrdinalIgnoreCase);
+            if(inside && !Games.Any(g=>Below(g.Path,path))) DeleteInside(path);
+            if(inside)
+            {
+                string package=System.IO.Path.Combine(Root,System.IO.Path.GetRelativePath(Root,path).Split(System.IO.Path.DirectorySeparatorChar)[0]);
+                if(!SamePath(package,Root) && Directory.Exists(package) && !Games.Any(g=>SamePath(g.Path,package)||Below(g.Path,package))) DeleteInside(package);
+            }
         }
         Save(); return true;
     }

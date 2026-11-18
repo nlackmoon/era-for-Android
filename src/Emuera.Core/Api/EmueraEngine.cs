@@ -93,7 +93,7 @@ namespace MinorShift.Emuera.Api
 		/// <param name="host">画面側への通知を受け取る実装</param>
 		/// <param name="clientWidth">描画領域の幅 (ピクセル)</param>
 		/// <param name="clientHeight">描画領域の高さ (ピクセル)</param>
-		public static async Task<EmueraEngine> StartAsync(string gameDir, IWindowHost host, int clientWidth = 800, int clientHeight = 600, bool useConfigWidth = false)
+		public static async Task<EmueraEngine> StartAsync(string gameDir, IWindowHost host, int clientWidth = 800, int clientHeight = 600, bool useConfigWidth = false, int renderScale = 1)
 		{
 			ArgumentNullException.ThrowIfNull(gameDir);
 			ArgumentNullException.ThrowIfNull(host);
@@ -135,6 +135,7 @@ namespace MinorShift.Emuera.Api
 			}
 
 			engine.window = new MainWindow(host);
+			engine.window.RenderScale = Math.Clamp(renderScale, 1, 3);
 			engine.window.SetClientSize(clientWidth, clientHeight);
 			engine.console = new EmueraConsole(engine.window);
 			engine.window.Console = engine.console;

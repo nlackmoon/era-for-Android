@@ -148,14 +148,14 @@ internal static class LogicalLineParser
 					}
 					if (label.IsMethod)
 					{
-						if (label.MethodType == typeof(long) && token.SequenceEqual("FUNCTION") || label.MethodType == typeof(string) && token.SequenceEqual("FUNCTIONS"))
+						if (label.MethodType == typeof(long) && token.Equals("FUNCTION", Config.Config.StringComparison) || label.MethodType == typeof(string) && token.Equals("FUNCTIONS", Config.Config.StringComparison))
 						{
 							ParserMediator.Warn(string.Format(trerror.AlreadySharpDeclared.Text, label.LabelName, token.ToString()), position, 1);
 							return false;
 						}
-						if (label.MethodType == typeof(long) && token.SequenceEqual("FUNCTIONS"))
+						if (label.MethodType == typeof(long) && token.Equals("FUNCTIONS", Config.Config.StringComparison))
 							ParserMediator.Warn(string.Format(trerror.AlreadyDeclaredSharpFunction.Text, label.LabelName), position, 2);
-						else if (label.MethodType == typeof(string) && token.SequenceEqual("FUNCTION"))
+						else if (label.MethodType == typeof(string) && token.Equals("FUNCTION", Config.Config.StringComparison))
 							ParserMediator.Warn(string.Format(trerror.AlreadyDeclaredSharpFunctions.Text, label.LabelName), position, 2);
 						return false;
 					}
@@ -223,7 +223,8 @@ internal static class LogicalLineParser
 							break;
 						}
 						int size = (int)sizeTerm.Int;
-						if (token.SequenceEqual("LOCALSIZE"))
+						// EraFlow: 同じ理由で表記ゆれ (#LocalSize など) も拾う
+						if (token.Equals("LOCALSIZE", Config.Config.StringComparison))
 						{
 							if (GlobalStatic.IdentifierDictionary.getLocalIsForbid("LOCAL"))
 							{
@@ -252,7 +253,11 @@ internal static class LogicalLineParser
 					{
 						var wc = LexicalAnalyzer.Analyse(st, LexEndWith.EoL, LexAnalyzeFlag.AllowAssignment);
 
-						UserDefinedVariableData data = UserDefinedVariableData.Create(wc, token.SequenceEqual("DIMS"), true, position);
+						// EraFlow: 上の case は IgnoreCase で #DIMS に一致させているのに、
+						// ここだけ ordinal 比較だったため "#DiMS" が整数変数になっていた。
+						// その結果 TRYCALLFORM ITEM_{n}(n, "INIT") が
+						// 「2番目の引数を文字列型から整数型に変換できません」で落ちる。
+						UserDefinedVariableData data = UserDefinedVariableData.Create(wc, token.Equals("DIMS", Config.Config.StringComparison), true, position);
 						if (!label.AddPrivateVariable(data))
 						{
 							ParserMediator.Warn(string.Format(trerror.VarNameAlreadyUsed.Text, data.Name), position, 2);

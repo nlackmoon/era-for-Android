@@ -1,5 +1,7 @@
 # era for Android 1.1.1
 
+> **本仓库是 [ArtifactYu/era-for-Android](https://github.com/ArtifactYu/era-for-Android) 的非官方修改分支**，基线 commit `fe54fae`（v1.1.1），分支名 `eraflow-mod`。改了什么、怎么构建，见 [`FORK-MOD.md`](FORK-MOD.md)。不是上游官方分支，也不代表原作者。
+
 安卓 Era 游戏播放器。应用与界面为本项目新建，引擎基于 Emuera.EM+EE 与 andEmuera 修改。
 
 请先阅读 BUILD-ERAFLOW.md。源码已包含完整修补引擎，无需重复应用历史 patches。原说明保留为 README-andEmuera.md，作者与许可证见 licenses。qa 包含测试工具、原始游戏校验清单（仅名称与哈希，不含下载地址）、输入序列和自主编写的中性游戏。第三方游戏、工具链和私有签名密钥不在包内。

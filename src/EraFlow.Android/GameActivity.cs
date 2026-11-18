@@ -16,18 +16,34 @@ public sealed class GameActivity:Activity
  {
   base.OnCreate(state);Window!.AddFlags(WindowManagerFlags.KeepScreenOn);
   if(OperatingSystem.IsAndroidVersionAtLeast(28))WebView.SetDataDirectorySuffix("game");
-  web=new WebView(this);Platform.Configure(this,web,true);Platform.SetContent(this,web);web.AddJavascriptInterface(new JsBridge(Receive),"Android");
+  web=new WebView(this);Platform.Configure(this,web,true);Platform.SetContent(this,web);ApplyImmersive();web.AddJavascriptInterface(new JsBridge(Receive),"Android");
   title=Intent?.GetStringExtra("title")??"Era";gameId=Intent?.GetStringExtra("id")??"";
   web.SetWebViewClient(new LocalClient(()=>{Platform.Send(this,web,"title",title);Platform.Send(this,web,"settings",LoadSettings());},u=>u=="about:blank"||u.StartsWith("file:///android_asset/")||(host!=null&&u.StartsWith(host.Url))));
   web.LoadUrl("file:///android_asset/loading.html");
   try
   {
    string path=Path.GetFullPath(Intent?.GetStringExtra("path")??"");string root=Path.Combine(FilesDir!.AbsolutePath,"library")+Path.DirectorySeparatorChar;
-   if(!path.StartsWith(root,StringComparison.Ordinal))throw new IOException("游戏路径无效。");
+   bool external=Intent?.GetBooleanExtra("external",false)==true;
+   if(external)
+   {
+    // 直读模式：目录在用户自己的存储里，只校验它确实是一个 Era 游戏目录。
+    if(!Directory.Exists(Path.Combine(path,"erb"))||!Directory.Exists(Path.Combine(path,"csv")))throw new IOException("游戏目录无效。");
+   }
+   else if(!path.StartsWith(root,StringComparison.Ordinal))throw new IOException("游戏路径无效。");
    Platform.Fonts(this);MinorShift.Emuera.Runtime.Utils.PluginSystem.BuiltinPlugins.BrowserLauncher=_=>{};
-   host=new EmueraWebHost(path,1000,420){Log=s=>Android.Util.Log.Info("EraFlowEngine",s)};await host.StartAsync();if(!exiting)web.LoadUrl(host.Url);
+   // 文字を滲ませないため、端末の画素密度ぶんだけ高解像度で描く (論理レイアウトは据え置き)。
+   // 3 倍は PNG 化が重く操作がもたつくので 2 倍で頭打ちにする。
+   int scale=Math.Clamp((int)Math.Round(Resources?.DisplayMetrics?.Density??2f),1,2);
+   host=new EmueraWebHost(path,1000,420,0,true,scale){Log=s=>Android.Util.Log.Info("EraFlowEngine",s)};await host.StartAsync();if(!exiting)web.LoadUrl(host.Url);
   }catch(Exception e){Android.Util.Log.Error("EraFlowEngine",e.ToString());Platform.Send(this,web,"error","游戏未能启动："+e.Message);}
  }
+ /// <summary>状态栏/导航栏都收起来，游戏画面铺满整屏 (UEmuera 那种全屏)。</summary>
+ void ApplyImmersive()
+ {
+  Window!.AddFlags(WindowManagerFlags.Fullscreen);
+  Window.DecorView.SystemUiVisibility=(StatusBarVisibility)(SystemUiFlags.LayoutStable|SystemUiFlags.LayoutFullscreen|SystemUiFlags.LayoutHideNavigation|SystemUiFlags.HideNavigation|SystemUiFlags.Fullscreen|SystemUiFlags.ImmersiveSticky);
+ }
+ public override void OnWindowFocusChanged(bool hasFocus){base.OnWindowFocusChanged(hasFocus);if(hasFocus)ApplyImmersive();}
  object LoadSettings()
  {
   var p=GetSharedPreferences("player",Android.Content.FileCreationMode.Private)!;string json=p.GetString(gameId,"{\"scale\":1,\"images\":true,\"haptic\":true,\"left\":false,\"compact\":false}")!;try{return JsonSerializer.Deserialize<JsonElement>(json);}catch{return new{scale=1,images=true,haptic=true,left=false,compact=false};}

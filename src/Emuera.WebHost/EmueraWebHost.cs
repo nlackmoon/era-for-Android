@@ -60,16 +60,23 @@ namespace MinorShift.Emuera.WebHost
 
 		readonly bool useConfigWidth;
 
+		/// <summary>オフスクリーン描画の倍率 (1〜3)。文字を端末の画素密度に合わせて鮮明にする。</summary>
+		readonly int renderScale;
+
 		/// <param name="useConfigWidth">
 		/// true なら emuera.config のウィンドウ幅で描画し、画面側で縮小表示させる。
 		/// スマホの実ピクセル幅で描くと era のレイアウトが横に収まらないため既定で有効。
 		/// </param>
-		public EmueraWebHost(string gameDir, int width = 960, int height = 1440, int port = 0, bool useConfigWidth = true)
+		/// <param name="renderScale">
+		/// 論理レイアウトを変えずにビットマップだけ高解像度にする倍率。
+		/// </param>
+		public EmueraWebHost(string gameDir, int width = 960, int height = 1440, int port = 0, bool useConfigWidth = true, int renderScale = 1)
 		{
 			GameDir = gameDir;
 			Width = width;
 			Height = height;
 			this.useConfigWidth = useConfigWidth;
+			this.renderScale = Math.Clamp(renderScale, 1, 3);
 
 			server = new MiniWebServer(port);
 			server.OnRequest = HandleRequest;
@@ -106,7 +113,7 @@ namespace MinorShift.Emuera.WebHost
 			// 2,697 回ぶんの継続がすべて UI スレッドのルーパへ post される。
 			// ここで一段挟めば以降のコンテキストは null (スレッドプール) になる。
 			// 描画はオフスクリーンの SkiaSharp なので UI スレッド固有の要求は無い
-			engine = await Task.Run(() => EmueraEngine.StartAsync(GameDir, this, Width, Height, useConfigWidth));
+			engine = await Task.Run(() => EmueraEngine.StartAsync(GameDir, this, Width, Height, useConfigWidth, renderScale));
 			var size = engine.ClientSize;
 			Width = size.Width;
 			Height = size.Height;
@@ -275,6 +282,7 @@ namespace MinorShift.Emuera.WebHost
 		string lastState;
 		bool lastSingleInput;
 		int lastButtons = -1;
+		string lastChoices = "";
 
 		void NotifyRedraw()
 		{
@@ -326,23 +334,29 @@ namespace MinorShift.Emuera.WebHost
 		{
 			string state = DescribeState(engine);
 
-			// 選択肢の数は「入力欄が要る場面かどうか」の判断にだけ使う。
-			// 表示行を走査するので gate の中で数える (実行中はそもそも数えない)。
-			// スクリプト実行スレッドから来た場合は既に持っているので、Monitor の再帰で素通りする
+			// 选择肢そのものを画面側へ送る。数字キーではなく「1 打击 / 2 逃跑」の
+			// 透明ボタンとして右側に並べるため、text と input 値の両方が要る。
+			object[] choices = [];
+			string choicesSig = "";
 			int buttons = 0;
 			if (state is "integer" or "string" or "any")
 			{
 				lock (gate)
-					buttons = engine.SelectableButtonCount();
+				{
+					choices = engine?.GetSelectableChoices() ?? [];
+					buttons = choices.Length;
+					choicesSig = JsonSerializer.Serialize(choices);
+				}
 			}
 
 			bool single = engine?.IsSingleInput == true;
-			if (state == lastState && buttons == lastButtons && single == lastSingleInput)
+			if (state == lastState && buttons == lastButtons && single == lastSingleInput && choicesSig == lastChoices)
 				return;
 			lastState = state;
 			lastButtons = buttons;
 			lastSingleInput = single;
-			Send(new { t = "state", v = state, n = buttons, single });
+			lastChoices = choicesSig;
+			Send(new { t = "state", v = state, n = buttons, single, choices });
 		}
 
 		/// <summary>
@@ -630,7 +644,7 @@ namespace MinorShift.Emuera.WebHost
 
 				// スクリプトを走らせうる操作は、gate を取る前に「処理中」を伝える。
 				// 実行中は受信スレッドごと止まるので、ここを逃すと言う機会が無い
-				if (type is "click" or "submit" or "enter" or "skip")
+				if (type is "click" or "submit" or "enter" or "skip" or "skipall")
 					SendBusy();
 
 				var waited = Stopwatch.StartNew();
@@ -690,6 +704,13 @@ namespace MinorShift.Emuera.WebHost
 							changed = true;   // 選択表示が変わることがあるので必ず反映させる
 							break;
 
+						// 画面側の「一键跳过」。右クリックではなく、入力待ちに当たるまで
+						// PressEnterKey(skip=true) のループを回す。
+						case "skipall":
+							tapResult = engine.PressEnter(true);
+							changed = true;
+							break;
+
 						case "resize":
 							int w = GetInt(root, "w");
 							int h = GetInt(root, "h");
@@ -745,7 +766,7 @@ namespace MinorShift.Emuera.WebHost
 		/// </summary>
 		void RecordInput(string type, double totalMs, long paints, double paintMs)
 		{
-			if (type is not ("click" or "submit" or "enter" or "skip"))
+			if (type is not ("click" or "submit" or "enter" or "skip" or "skipall"))
 				return;
 
 			lastInputType = type;

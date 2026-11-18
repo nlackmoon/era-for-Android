@@ -114,14 +114,15 @@ internal sealed class ErhLoader
 						break;
 					case var s when s.Equals("FUNCTION", Config.Config.StringComparison) ||
 									s.Equals("FUNCTIONS", Config.Config.StringComparison):
-						analyzeSharpFunction(st, position, sharpID == "FUNCTIONS");
+						// EraFlow: 判定は IgnoreCase、フラグは ordinal という食い違いを揃える
+						analyzeSharpFunction(st, position, sharpID.Equals("FUNCTIONS", Config.Config.StringComparison));
 						break;
 					case var s when s.Equals("DIM", Config.Config.StringComparison) ||
 									s.Equals("DIMS", Config.Config.StringComparison):
 						//1822 #DIMは保留しておいて後でまとめてやる
 						{
 							WordCollection wc = LexicalAnalyzer.Analyse(st, LexEndWith.EoL, LexAnalyzeFlag.AllowAssignment);
-							dimlines.Enqueue(new DimLineWC(wc, sharpID.SequenceEqual("DIMS"), false, position));
+							dimlines.Enqueue(new DimLineWC(wc, sharpID.Equals("DIMS", Config.Config.StringComparison), false, position));
 						}
 						//analyzeSharpDim(st, position, sharpID == "DIMS");
 						break;
