@@ -95,6 +95,7 @@ input[type=range]{flex:1;min-width:0;accent-color:#8fc56c;margin:0}
    <div class="row"><span>显示游戏图片</span><button class="sw" id="sw-images" role="switch" aria-checked="true" aria-label="显示游戏图片"></button></div>
    <div class="row"><span>按键振动</span><button class="sw" id="sw-haptic" role="switch" aria-checked="true" aria-label="按键振动"></button></div>
    <div class="row"><span>常驻数字键盘</span><button class="sw" id="sw-pad" role="switch" aria-checked="true" aria-label="常驻数字键盘"></button></div>
+   <div class="row"><span>显示选项面板</span><button class="sw" id="sw-choices" role="switch" aria-checked="true" aria-label="显示选项面板"></button></div>
    <div class="row"><span>键盘透明度</span><input id="padalpha" type="range" min="15" max="70" step="5" value="35"><output id="padalphaval">35%</output></div>
    <div class="row"><span>选项列数</span><div class="seg" id="choicecols"><button data-cols="1">1</button><button data-cols="2" class="on">2</button><button data-cols="3">3</button></div></div>
    <div class="row"><span>选项块大小</span><input id="choicescale" type="range" min="70" max="130" step="5" value="100"><output id="choicescaleval">100%</output></div>
@@ -112,7 +113,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const stage=$('stage'),screen=$('screen'),text=$('text'),pad=$('pad'),sheet=$('sheet');
 const token=new URLSearchParams(location.search).get('token');
 let ws=null,mode='loading',single=false,inflight=false,ready=false,manualKb=false;
-let setting={scale:1,images:true,haptic:true,pad:true,padAlpha:.35,fit:'fill',choiceScale:1,choiceCols:2};let choicesVisible=false,padSuppressed=false;
+let setting={scale:1,images:true,haptic:true,pad:true,padAlpha:.35,fit:'fill',choiceScale:1,choiceCols:2,showChoices:true};let choicesVisible=false,padSuppressed=false,lastChoices=[];
 let engineW=1000,engineH=420,lineHeight=20,pan=0,zoom=1,scrollPos=0,scrollMax=0;
 let frameURL=null,toastTimer=0,retryTimer=0,resizeTimer=0,dimTimer=0,retries=0;
 
@@ -238,15 +239,17 @@ function frame(buf){
 function setScroll(s,max){s=Number(s)||0;max=Number(max)||0;scrollPos=s;scrollMax=max;$('latest').hidden=s>=max;}
 
 function syncPad(){
+ // 选项面板显示时收起数字键盘；否则按常驻开关显示。
  pad.classList.toggle('off',!setting.pad||padSuppressed);
  pad.style.setProperty('--pad-a',setting.padAlpha);
  pad.style.setProperty('--pad-k',Math.min(.72,setting.padAlpha+.12));
  $('sw-pad').setAttribute('aria-checked',String(!!setting.pad));
+ $('sw-choices').setAttribute('aria-checked',String(!!setting.showChoices));
 }
 function setChoices(list){
  const box=$('choices'),arr=Array.isArray(list)?list:[];
- choicesVisible=arr.length>0;
- // 有选项时临时收起数字键盘；选项消失后自动恢复，不改用户开关。
+ lastChoices=arr;
+ choicesVisible=arr.length>0 && setting.showChoices;
  padSuppressed=choicesVisible;
  if(!choicesVisible){box.hidden=true;box.innerHTML='';syncPad();return;}
  box.innerHTML=arr.map(c=>{const raw=String(c.text||c.value||'').trim();const label=raw.replace(/^\[(\d+)\]\s*/,'$1  ');return `<button data-choice="${esc(String(c.value??''))}" title="${esc(label)}"><span class="ctext">${esc(label)}</span></button>`}).join('');
@@ -275,7 +278,7 @@ $('del').onclick=()=>{haptic();text.value=text.value.slice(0,-1)};
 $('del').oncontextmenu=e=>{e.preventDefault();text.value=''};
 $('kb').onclick=()=>{manualKb=!manualKb;text.inputMode=manualKb?'text':'none';if(manualKb){text.focus();toast('可输入文字、负数或粘贴内容')}else text.blur()};
 $('send').onclick=submit;
-$('keys').onclick=()=>{haptic();if(choicesVisible)padSuppressed=!padSuppressed;else setting.pad=!setting.pad;syncPad();native('settings',setting)};
+$('keys').onclick=()=>{haptic();setting.pad=!setting.pad;syncPad();native('settings',setting)};
 $('menu').onclick=()=>{haptic();openSheet()};
 $('skip').onclick=()=>{haptic();send({t:'skipall'})};
 $('back').onclick=()=>native('home');
@@ -290,12 +293,13 @@ $('zoom').onchange=()=>native('settings',setting);
 $('sw-images').onclick=()=>{setting.images=!setting.images;applySettings();native('settings',setting)};
 $('sw-haptic').onclick=()=>{setting.haptic=!setting.haptic;applySettings();native('settings',setting)};
 $('sw-pad').onclick=()=>{setting.pad=!setting.pad;syncPad();native('settings',setting)};
+$('sw-choices').onclick=()=>{setting.showChoices=!setting.showChoices;syncPad();setChoices(lastChoices);native('settings',setting)};
 $('padalpha').oninput=()=>{setting.padAlpha=Number($('padalpha').value)/100;$('padalphaval').value=$('padalpha').value+'%';syncPad()};
 $('padalpha').onchange=()=>native('settings',setting);
 $('choicescale').oninput=()=>{setting.choiceScale=Number($('choicescale').value)/100;applyChoiceLayout()};
 document.querySelectorAll('#choicecols [data-cols]').forEach(b=>b.onclick=()=>{setting.choiceCols=Number(b.dataset.cols);applyChoiceLayout();native('settings',setting)});
 $('choicescale').onchange=()=>native('settings',setting);
-$('reset').onclick=()=>{setting.scale=1;setting.fit='fill';setting.images=true;setting.pad=true;setting.padAlpha=.35;setting.choiceScale=1;setting.choiceCols=2;applySettings();native('settings',setting)};
+$('reset').onclick=()=>{setting.scale=1;setting.fit='fill';setting.images=true;setting.pad=true;setting.padAlpha=.35;setting.choiceScale=1;setting.choiceCols=2;setting.showChoices=true;applySettings();native('settings',setting)};
 $('savehelp').onclick=()=>toast('用游戏内菜单存档；游戏库可导出/恢复存档备份');
 
 text.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
