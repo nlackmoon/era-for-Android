@@ -471,7 +471,15 @@ internal sealed partial class Process(EmueraConsole view)
 				return state.Scope;
 			}
 	*/
-	public LogicalLine scaningLine;
+	// ERB の関数本体は複数スレッドで並列に解析する（ErbLoader.ParseScriptInParallel）。
+	// 解析中のエラー位置はスレッドごとに独立している必要があるため ThreadStatic にする。
+	[ThreadStatic]
+	static LogicalLine tlsScaningLine;
+	public LogicalLine scaningLine
+	{
+		get { return tlsScaningLine; }
+		set { tlsScaningLine = value; }
+	}
 	internal LogicalLine GetScaningLine()
 	{
 		if (scaningLine != null)

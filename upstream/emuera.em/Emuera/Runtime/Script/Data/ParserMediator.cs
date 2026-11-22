@@ -120,13 +120,20 @@ internal partial class ParserMediator
 		if (isBackComp && !Config.WarnBackCompatibility)
 			return;
 		if (console != null && !console.RunERBFromMemory)
-			warningList.Add(new ParserWarning(str, line.Position, level, stack));
+		{
+			// 関数本体の解析は並列に走るので、警告リストは必ずロックして追加する
+			lock (warningListLock)
+			{
+				warningList.Add(new ParserWarning(str, line.Position, level, stack));
+			}
+		}
 		//				console.PrintWarning(str, line.Position, level);
 	}
 
 	private static List<ParserWarning> warningList = [];
 
 	public static bool HasWarning { get { return warningList.Count > 0; } }
+	public static int WarningCount { get { lock (warningListLock) { return warningList.Count; } } }
 	public static void ClearWarningList()
 	{
 		warningList.Clear();

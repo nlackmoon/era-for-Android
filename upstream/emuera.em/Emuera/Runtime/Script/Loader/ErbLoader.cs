@@ -13,6 +13,7 @@ using MinorShift.Emuera.Sub;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using trerror = MinorShift.Emuera.Runtime.Utils.EvilMask.Lang.Error;
 using trsl = MinorShift.Emuera.Runtime.Utils.EvilMask.Lang.SystemLine;
@@ -31,6 +32,7 @@ internal sealed class ErbLoader
 	readonly ExpressionMediator exm;
 	readonly EmueraConsole output;
 	readonly HashSet<string> ignoredFNFWarningFiles = new(StringComparer.OrdinalIgnoreCase);
+	readonly object fnfWarningLock = new();
 	int ignoredFNFWarningCount;
 
 	int enabledLineCount;
@@ -106,6 +108,10 @@ internal sealed class ErbLoader
 				await Task.Run(() => loadErb(file, filename, isOnlyEvent));
 			};
 			Prof("LoadAll");
+			// ここまでで全ファイルの字句解析が終わっている。Preload は 187MB の ERB を
+			// UTF-16 文字列として抱えているので、関数本体の解析に入る前に手放す。
+			// （次に必要になるのは ReloadErb で、そのときは Preload.Load をやり直す）
+			Preload.Clear();
 			ParserMediator.FlushWarningList();
 #if DEBUG
 			output.PrintSystemLine(string.Format(trsl.ElapsedTime.Text, (DateTime.Now - starttime).TotalMilliseconds));
@@ -691,6 +697,47 @@ internal sealed class ErbLoader
 	public bool useCallForm;
 
 	/// <summary>
+	/// 関数本体の並列解析を無効にする（比較・デバッグ用）。
+	/// </summary>
+	static bool ScriptParseSingleThread => Program.SingleThreadScriptParse;
+
+	/// <summary>
+	/// 深さごとに関数本体を並列解析する。
+	///
+	/// 逐次版は「深さ 0（イベント関数）を解析 → CALL 先に深さ 1 が付く → 深さ 1 を解析 …」
+	/// と 1 段ずつ進む。ここでも同じ層構造をたどるので、解析対象になる関数の集合は
+	/// 逐次版と完全に同じ（到達できない関数は解析しない）。
+	/// 違いは 1 層の中を複数スレッドで分担する点だけ。
+	/// </summary>
+	private int ParseScriptInParallel(List<FunctionLabelLine> labelList, HashSet<FunctionLabelLine> parsed)
+	{
+		int usedLabelCount = 0;
+		int degree = Math.Max(2, Environment.ProcessorCount);
+		var sw = System.Diagnostics.Stopwatch.StartNew();
+		for (int depth = 0; ; depth++)
+		{
+			List<FunctionLabelLine> batch = [];
+			foreach (FunctionLabelLine label in labelList)
+			{
+				if (label.Depth == depth && !parsed.Contains(label))
+					batch.Add(label);
+			}
+			if (batch.Count == 0)
+				break;
+			foreach (FunctionLabelLine label in batch)
+				parsed.Add(label);
+			usedLabelCount += batch.Count;
+			if (batch.Count == 1)
+				ParseFunctionWithCatch(batch[0]);
+			else
+				Parallel.ForEach(batch, new ParallelOptions { MaxDegreeOfParallelism = degree }, ParseFunctionWithCatch);
+			if (Program.BootProfile)
+				System.Console.Error.WriteLine($"ERB.layer{depth} labels={batch.Count} total={sw.ElapsedMilliseconds}ms");
+		}
+		return usedLabelCount;
+	}
+
+	/// <summary>
 	/// 事前処理したファイルをさらに解析し実行可能な状態にする
 	/// </summary>
 	private void ParseScript()
@@ -698,25 +745,37 @@ internal sealed class ErbLoader
 		int usedLabelCount = 0;
 		int labelDepth = -1;
 		List<FunctionLabelLine> labelList = labelDic.GetAllLabels(true);
-		while (true)
+		// 関数本体の解析は関数ごとに独立しているので並列化できる。
+		// ただし解析モード（構文チェック専用）は警告の集計が単一スレッド前提なので逐次のまま。
+		bool parallelParse = !Program.AnalysisMode && !ScriptParseSingleThread && Environment.ProcessorCount > 1;
+		HashSet<FunctionLabelLine> parsedLabels = parallelParse ? [] : null;
+		if (parallelParse)
 		{
-			labelDepth++;
-			int countInDepth = 0;
-			foreach (FunctionLabelLine label in labelList)
+			usedLabelCount = ParseScriptInParallel(labelList, parsedLabels);
+		}
+		else
+		{
+			while (true)
 			{
-				if (label.Depth != labelDepth)
-					continue;
-				//1756beta003 なんで追加したんだろう デバグ中になんかやったのか とりあえずコメントアウトしておく
-				//if (label.LabelName == "EVENTTURNEND")
-				//    useCallForm = true;
-				usedLabelCount++;
-				countInDepth++;
-				ParseFunctionWithCatch(label);
+				labelDepth++;
+				int countInDepth = 0;
+				foreach (FunctionLabelLine label in labelList)
+				{
+					if (label.Depth != labelDepth)
+						continue;
+					//1756beta003 なんで追加したんだろう デバグ中になんかやったのか とりあえずコメントアウトしておく
+					//if (label.LabelName == "EVENTTURNEND")
+					//    useCallForm = true;
+					usedLabelCount++;
+					countInDepth++;
+					ParseFunctionWithCatch(label);
+				}
+				if (countInDepth == 0)
+					break;
 			}
-			if (countInDepth == 0)
-				break;
 		}
 		labelDepth = -1;
+		var dbgSw = System.Diagnostics.Stopwatch.StartNew();
 		var ignoredFNCWarningFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		int ignoredFNCWarningCount = 0;
 
@@ -736,6 +795,10 @@ internal sealed class ErbLoader
 			foreach (FunctionLabelLine label in labelList)
 			{
 				if (label.Depth != labelDepth)
+					continue;
+				// 並列版では深さ 0 の解析が終わった時点で useCallForm が立ち得る。
+				// 逐次版と同じく、まだ解析していない関数をここで解析する。
+				if (parallelParse && !parsedLabels.Add(label))
 					continue;
 				ParseFunctionWithCatch(label);
 			}
@@ -774,7 +837,10 @@ internal sealed class ErbLoader
 				else
 					ParserMediator.Warn(string.Format(trerror.FuncNeverCalled.Text, label.LabelName), label, 1, false, false);
 				if (!ignoreUncalledFunction)
-					ParseFunctionWithCatch(label);
+				{
+					if (!parallelParse || parsedLabels.Add(label))
+						ParseFunctionWithCatch(label);
+				}
 				else
 				{
 					if (!(label.NextLine is NullLine) && !(label.NextLine is FunctionLabelLine))
@@ -787,6 +853,14 @@ internal sealed class ErbLoader
 					}
 				}
 			}
+		}
+		if (Program.BootProfile)
+		{
+			int uncalledCount = 0;
+			for (int i = 0; i < labelList.Count; i++)
+				if (labelList[i].Depth == -1)
+					uncalledCount++;
+			System.Console.Error.WriteLine($"ERB.uncalledLoop {dbgSw.ElapsedMilliseconds}ms uncalled={uncalledCount} parsed={usedLabelCount} total={labelList.Count} heap={GC.GetTotalMemory(false) / 1048576}MB gc0={GC.CollectionCount(0)} gc2={GC.CollectionCount(2)} pause={GC.GetTotalPauseDuration().TotalMilliseconds}ms");
 		}
 		if (Program.AnalysisMode && (warningDic.Keys.Count > 0 || GlobalStatic.tempDic.Keys.Count > 0))
 		{
@@ -815,7 +889,11 @@ internal sealed class ErbLoader
 			if (ignoredFNFWarningCount > 0 && Config.Config.DisplayWarningLevel <= 2 && notCalledWarning != DisplayWarningFlag.IGNORE)
 				output.PrintError(string.Format(trerror.IgnoredUndefinedFuncCall.Text, ignoredFNFWarningCount));
 		}
+		if (Program.BootProfile)
+			System.Console.Error.WriteLine($"ERB.warnQueue {dbgSw.ElapsedMilliseconds}ms queued={ParserMediator.WarningCount} notCalledMode={notCalledWarning} warnLevel={Config.Config.DisplayWarningLevel}");
 		ParserMediator.FlushWarningList();
+		if (Program.BootProfile)
+			System.Console.Error.WriteLine($"ERB.flushWarnings {dbgSw.ElapsedMilliseconds}ms");
 		if (Config.Config.DisplayReport)
 			output.PrintError(string.Format(trerror.TotalFunc.Text, enabledLineCount, labelDic.Count, usedLabelCount));
 		if (Config.Config.AllowFunctionOverloading && Config.Config.WarnFunctionOverloading)
@@ -871,20 +949,24 @@ internal sealed class ErbLoader
 			string filename = line.Position.Value.Filename;
 			if (!string.IsNullOrEmpty(filename))
 			{
-				if (ignoredFNFWarningFiles.Contains(filename))
+				// 並列解析中は同じ警告を二重に出さないための記録が競合するのでロックする
+				lock (fnfWarningLock)
 				{
-					ignore = true;
-				}
-				else
-				{
-					ignore = false;
-					ignoredFNFWarningFiles.Add(filename);
+					if (ignoredFNFWarningFiles.Contains(filename))
+					{
+						ignore = true;
+					}
+					else
+					{
+						ignore = false;
+						ignoredFNFWarningFiles.Add(filename);
+					}
 				}
 			}
 		}
 		if (ignore && !Program.AnalysisMode)
 		{
-			ignoredFNFWarningCount++;
+			Interlocked.Increment(ref ignoredFNFWarningCount);
 			return;
 		}
 		ParserMediator.Warn(str, line, level, isError, false);

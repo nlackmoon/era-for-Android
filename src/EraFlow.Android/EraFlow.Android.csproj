@@ -14,5 +14,8 @@
   <AndroidAsset Include="../andEmuera.Android/Assets/fonts/*" Link="fonts/%(Filename)%(Extension)"/>
   <AndroidAsset Include="../../licenses/*" Link="licenses/%(Filename)%(Extension)"/>
   <AndroidAsset Include="../../LICENSE" Link="licenses/LICENSE"/>
+  <!-- 起動時の GC を減らす。既定の nursery は数 MB しかなく、ERB の解析で
+       1.5GB 近く確保するあいだに minor GC が 1200 回以上走っていた。 -->
+  <AndroidEnvironment Include="Resources/environment.conf"/>
  </ItemGroup>
 </Project>

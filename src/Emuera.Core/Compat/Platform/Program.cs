@@ -24,6 +24,10 @@ namespace MinorShift.Emuera
 			MinorShift.Emuera.GameView.PuchiGraphics.Reset();
 			SetDirPaths(gameDir);
 			ExeName = "Emuera";
+			// Android では環境変数を渡せないので、ゲームフォルダに空ファイルを置けば
+			// 起動時間の内訳 (time.log) が出るようにしておく
+			BootProfile = BootProfile || File.Exists(Path.Combine(gameDir, "bootprofile.flag"));
+			SingleThreadScriptParse = SingleThreadScriptParse || File.Exists(Path.Combine(gameDir, "singleparse.flag"));
 			LoadGameFonts();
 		}
 
@@ -123,6 +127,14 @@ namespace MinorShift.Emuera
 		/// </summary>
 		public static bool BootProfile { get; set; }
 			= System.Environment.GetEnvironmentVariable("ANDEMUERA_BOOT_PROFILE") == "1";
+
+		/// <summary>
+		/// ERB の関数本体を 1 本のスレッドで解析する（並列化を切る）。
+		/// 既定は並列。ゲーム側の記述が原因で並列時にだけ落ちる場合の避難用で、
+		/// ゲームフォルダに singleparse.flag を置くか、環境変数で切り替える。
+		/// </summary>
+		public static bool SingleThreadScriptParse { get; set; }
+			= System.Environment.GetEnvironmentVariable("ERAFLOW_SCRIPT_SINGLE_THREAD") == "1";
 
 		static Program()
 		{
