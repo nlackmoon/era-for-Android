@@ -1786,7 +1786,10 @@ internal sealed class ConstantData
 					continue;
 				}
 				if (!defined.Add(index))
-					ParserMediator.Warn(string.Format(trerror.VarKeyAreadyDefined.Text, index.ToString()), position, 1);
+					// メッセージは "{0}"=名前 / "{1}"=番号 の 2 引数。1 つしか渡すと
+					// string.Format が FormatException を投げ、呼び出し元の catch が
+					// 「予期しないエラー」(Lv3) にして読み込み自体を中断してしまう。
+					ParserMediator.Warn(string.Format(trerror.VarKeyAreadyDefined.Text, Path.GetFileName(csvPath), index.ToString()), position, 1);
 				target[index] = ros[dest[1]].ToString();
 				if (targetI != null && length >= 3)
 				{
@@ -1859,7 +1862,9 @@ internal sealed class ConstantData
 					continue;
 				}
 				if (!defined.Add(index))
-					ParserMediator.Warn(string.Format(trerror.VarKeyAreadyDefined.Text, index.ToString()), position, 1);
+					// loadDataTo と同じ理由で 2 引数。ここで例外が出ると .als の残りが
+					// すべて捨てられ、別名で書かれた識別子が軒並み未定義になる。
+					ParserMediator.Warn(string.Format(trerror.VarKeyAreadyDefined.Text, Path.GetFileName(aliasPath), index.ToString()), position, 1);
 				target.TryAdd(tokens[1], index);
 			}
 		}

@@ -17,6 +17,23 @@
 - `#DiMS` / `#LocalSize` 指令大小写不敏感（`LogicalLineParser`）。
 - `.ERH` 的 `#DIMS` / `#FUNCTIONS` 同样按大小写不敏感处理（`ErhLoader`）。
 - 修复 `eraGoblin` 这类使用小写 `#DiMS` 的游戏在加载阶段直接报错的问题。
+- **`.als` 别名加载崩溃**：`ConstantData` 里 `VarKeyAreadyDefined` 的提示串需要两个参数
+  （名字 + 编号），原来只传了一个，`string.Format` 抛 `FormatException` 被上层吞成
+  Lv3「予期しないエラー」，导致该 CSV 的整批别名全部丢弃
+  （实测 TW 由此产生 690 处「无法解析的标识符」）。已补齐两个参数。
+- **行内解析失败不再整局退出**：启动时打开 `CompatiErrorLine`，与 PC 版行为一致，
+  单行写错只记警告，不再中断启动。
+- **SQL 插件兼容层**（`ErbSql` + `Creator.Method.Sql.cs`）：
+  `SQL_CONNECT`（命名连接，可带连接字符串，相对路径按游戏目录解析）、
+  `SQL_P_EXECUTE_NONQUERY/SCALAR_LONG/SCALAR_STRING/READER`（`@0` 参数绑定）、
+  `SQL_EXECUTE_*`（1 参用最近连接 / 2 参指定连接）、`SQL_READER_READ/GET_LONG/GET_STRING/ISNULL/CLOSE`、
+  `SQL_IMPORT_MAP_XML`（`<map><p><k>/<v>` → `(k,v)` 表）。
+  引擎内藏 SQLite，游戏里 `Data Source=plugins/xxx.db` 的库文件直接打开，只读目录会退到作业副本。
+- **EE 兼容补丁**：`GETPLATFORM`、`GETANIMETIMER`、`GETSOUNDORBGMINFO`、
+  `UNCHECKED_ADD/SUB/MUL/DIV/MOD`、`TEXT_BGC_ON/OFF`。
+- **图片资源初始化提速**：`AppContents.CreateFromCsv` 改为只读文件头取尺寸
+  （PNG/GIF/BMP/WebP/JPEG），首次 `.Bitmap` 访问才真正解码。
+  TW 的图片初始化 13.4 s → 0.19 s，总启动 31 s → 18 s。
 
 ### 游戏库与导入
 
@@ -30,11 +47,26 @@
 ### 播放器界面
 
 - 沉浸式全屏，去掉 Activity 标题栏、状态栏、导航栏和圆角窗口。
+- **真正 edge-to-edge**：游戏页不再把系统栏/刘海 inset 当成 padding（横屏时会在刘海一侧
+  留一整条黑边，看起来像“画面没铺满”）。改为 `layoutInDisplayCutoutMode = always`，
+  只在输入法弹出时保留底部边距。
 - 2x 离屏渲染（`RenderScale`），文字更清晰。
 - 右侧常驻透明数字键盘（可关、可调透明度）。
 - **右侧选项面板**：从引擎 `DisplayLineList` 取最新一代 `ConsoleButtonString`，按 `text` / `Inputs` 下发，渲染成可点击的透明块；支持 1/2/3 列、块大小 70%～130%、两行省略、独立纵向滚动。
 - **显示选项面板开关**：设置里可关闭右侧选项面板（默认开）。关闭后有选项时不再弹出面板，只保留正文文字与数字键盘；开关在「常驻数字键盘」下方，随「恢复默认显示」一并复位。
 - 右上角绿色 `»` 一键跳过：调用 `PressEnter(skipMessage: true)`，一直跳到下一个输入/选项。
+- **虚拟手柄**（顶栏手柄图标）：左下角 D-pad + A/B。
+  ▲/▼ 翻 1 行、◀/▶ 翻 10 行、● 回到最新；A 确认（有数字就提交，否则等于继续）、B 跳过一句。
+  开关按游戏保存，重进自动恢复。
+- **转向锁**（顶栏锁图标）：`RequestedOrientation = Locked` / `SensorLandscape`，在 Activity 层锁定，
+  不受网页层旋转影响。
+- **字号 A− / A+**：10～44 px，写入 `emuera.config` 的 `FONT SIZE`，行高不足时一并抬高；
+  按游戏保存，重进游戏生效。
+- **「等比」真正生效**：以前引擎始终按屏幕纵横比出图，`object-fit: contain` 看不出差别。
+  现在 `EmueraEngine.KeepNativeAspect` 让画布改按 `emuera.config` 的 `WindowY/WindowX` 重绘，
+  画面居中留黑边；点击/滑动坐标按实际画面矩形（`contentRect()`）换算，不会点歪。
+- **自动跟随最新行**：`scrollstate` 报告没到底、且用户没有主动往上翻时，自动发 `latest`，
+  避免新文本落在可视区外还要手动往上拖。
 - 设置：屏幕大小 70%～130%（中心缩放，缩小时黑边对称）、铺满/等比、显示图片、按键振动、常驻键盘、显示选项面板、键盘透明度、选项列数、选项块大小。
 - 删除点空白/滑动时弹出的“请使用数字键盘”提示。
 - 修复 `scrollPos/scrollMax` 未声明导致画面不刷新的 `ReferenceError`。

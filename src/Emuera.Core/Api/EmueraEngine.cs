@@ -112,6 +112,20 @@ namespace MinorShift.Emuera.Api
 			// expression functions introduced by EM+EE (for example @SAVETEXT).
 			// Keep parsing strict; permit name overloading, never skip invalid lines.
 			ConfigData.Instance.GetConfigItem(ConfigCode.AllowFunctionOverloading).SetValue(true);
+			// andEmuera: 中国語改変版 (eraTW 画蛇添足版など) は EE 拡張の関数
+			// (GETANIMETIMER / GETSOUNDORBGMINFO / SQL_*) を平気で使う。上流の emuera.em には
+			// 無いので「解釈できない行」になり、既定では起動すら止まる。
+			// 該当行は実行時にしか失敗しないため、PC 版と同じ互換オプションを既定で入れる。
+			ConfigData.Instance.GetConfigItem(ConfigCode.CompatiErrorLine).SetValue(true);
+			// 画面側の A− / A+ で決めたフォントサイズ。0 以下ならゲーム自身の emuera.config に従う。
+			// 文字の大きさは行の高さも巻き込むので、はみ出さないよう下限だけ合わせる。
+			if (FontSizeOverride >= 8)
+			{
+				ConfigData.Instance.GetConfigItem(ConfigCode.FontSize).SetValue(FontSizeOverride);
+				int lineHeight = ConfigData.Instance.GetConfigValue<int>(ConfigCode.LineHeight);
+				if (lineHeight < FontSizeOverride + 2)
+					ConfigData.Instance.GetConfigItem(ConfigCode.LineHeight).SetValue(FontSizeOverride + 4);
+			}
 			Config.SetConfig(ConfigData.Instance);
 			JSONConfig.Load();
 
@@ -128,6 +142,10 @@ namespace MinorShift.Emuera.Api
 			// 設定どおりの幅で描いて画面側で縮小表示させる (縦横比は端末に合わせる)。
 			if (useConfigWidth && Config.WindowX > 0 && clientWidth > 0)
 			{
+				// 「等比」表示の基準。作者が emuera.config で決めた縦横比を覚えておく。
+				// 端末の比で描いてしまうと、あとから等比に切り替えても黒帯が出ず
+				// 「設定が効いていない」ように見える
+				engine.nativeAspect = Config.WindowY > 0 ? (double)Config.WindowY / Config.WindowX : 0;
 				double aspect = (double)clientHeight / clientWidth;
 				clientWidth = Config.WindowX;
 				clientHeight = FitToLines((int)(clientWidth * aspect));
@@ -433,6 +451,9 @@ namespace MinorShift.Emuera.Api
 		/// <summary>1 行の高さ (ピクセル)。画面側がフリック量を行数へ換算するのに使う。</summary>
 		public int LineHeight => Config.LineHeight;
 
+		/// <summary>現在のフォントサイズ (ピクセル)。画面側の A− / A+ が基準値として使う。</summary>
+		public int FontSize => Config.FontSize;
+
 		/// <summary>
 		/// ログの現在位置と総行数。<c>Value == Max</c> なら最新行を表示している。
 		/// 単位は表示行で、EmueraConsole が描画のたびに更新する。
@@ -586,6 +607,12 @@ namespace MinorShift.Emuera.Api
 		/// </code>
 		/// フィルタと圧縮レベルは可逆なので、出力画素はどの設定でも完全に一致する。
 		/// </summary>
+		/// <summary>
+		/// 画面側の A− / A+ が決めたフォントサイズ (px)。エンジン生成時に一度だけ読む。
+		/// 0 以下ならゲーム自身の emuera.config の値を使う。
+		/// </summary>
+		public static int FontSizeOverride { get; set; }
+
 		public static PngFilterMode PngFilter { get; set; } = PngFilterMode.None;
 
 		/// <summary>PNG の zlib 圧縮レベル (0〜9)。Skia の既定は 6。</summary>
@@ -643,6 +670,20 @@ namespace MinorShift.Emuera.Api
 		int fixedWidth;
 
 		/// <summary>
+		/// emuera.config のウィンドウ縦横比 (WindowY / WindowX)。0 なら不明。
+		/// 「等比」表示のときに、端末の比ではなくこの比で描くために使う。
+		/// </summary>
+		double nativeAspect;
+
+		/// <summary>
+		/// true のとき、描画領域を端末の縦横比ではなくゲーム本来の縦横比で作る。
+		/// 画面側は黒帯を付けて表示するので、絵が縦横に伸びない。
+		/// </summary>
+		public bool KeepNativeAspect { get; set; }
+
+		public double NativeAspect => nativeAspect;
+
+		/// <summary>
 		/// 描画領域の高さを決める。
 		///
 		/// Emuera は下端から上へ行を並べるので、一番使う選択肢は必ず最下行に来る。
@@ -669,7 +710,10 @@ namespace MinorShift.Emuera.Api
 				return;
 			if (fixedWidth > 0)
 			{
-				double aspect = (double)height / width;
+				// 等比表示のときはゲーム本来の比、そうでなければ端末の比で高さを決める
+				double aspect = KeepNativeAspect && nativeAspect > 0
+					? nativeAspect
+					: (double)height / width;
 				width = fixedWidth;
 				height = (int)(width * aspect);
 			}

@@ -62,6 +62,28 @@ internal static partial class FunctionMethodCreator
 			["SQL_READER_GET_LONG"] = new SqlReaderGetLongMethod(),
 			["SQL_READER_GET_STRING"] = new SqlReaderGetStringMethod(),
 			["SQL_READER_IS_NULL"] = new SqlReaderIsNullMethod(),
+			// SQL.dll 系プラグインの名前・引数。TW (画蛇添足版) などが使う。
+			// 接続に名前を付けて複数持てるほか、@0 形式のパラメータを渡せる
+			["SQL_CONNECT"] = new SqlConnectMethod(),
+			["SQL_DISCONNECT"] = new SqlDisconnectMethod(),
+			["SQL_P_EXECUTE_NONQUERY"] = new SqlParamNonQueryMethod(),
+			["SQL_P_EXECUTE_SCALAR_LONG"] = new SqlParamScalarLongMethod(),
+			["SQL_P_EXECUTE_SCALAR_STRING"] = new SqlParamScalarStringMethod(),
+			["SQL_P_EXECUTE_READER"] = new SqlParamReaderMethod(),
+			["SQL_EXECUTE_SCALAR_LONG"] = new SqlExecuteScalerLongMethod(),
+			["SQL_EXECUTE_SCALAR_STRING"] = new SqlExecuteScalerStringMethod(),
+			["SQL_READER_ISNULL"] = new SqlReaderIsNullMethod(),
+			["SQL_READER_CLOSE"] = new SqlCloseReaderMethod(),
+			["SQL_IMPORT_MAP_XML"] = new SqlImportMapXmlMethod(),
+			// EE 拡張のうち、TW などが起動時・描画時に必ず通るもの
+			["GETPLATFORM"] = new GetPlatformMethod(),
+			["GETANIMETIMER"] = new GetAnimeTimerMethod(),
+			["GETSOUNDORBGMINFO"] = new GetSoundOrBgmInfoMethod(),
+			["UNCHECKED_ADD"] = new UncheckedBinaryMethod('+'),
+			["UNCHECKED_SUB"] = new UncheckedBinaryMethod('-'),
+			["UNCHECKED_MUL"] = new UncheckedBinaryMethod('*'),
+			["UNCHECKED_DIV"] = new UncheckedBinaryMethod('/'),
+			["UNCHECKED_MOD"] = new UncheckedBinaryMethod('%'),
 			#endregion
 
 			//汎用処理系
@@ -226,6 +248,10 @@ internal static partial class FunctionMethodCreator
 			["CBGSETG"] = new CBGSetGraphicsMethod(),
 			["CBGSETSPRITE"] = new CBGSetCIMGMethod(),
 			["CBGCLEAR"] = new CBGClearMethod(),
+			// EE 拡張。この移植版は本文の背景色を持たないので、どちらも何もしない。
+			// 中国語改変版 (eraTW 画蛇添足版など) が平気で呼ぶため未定義にしない。
+			["TEXT_BGC_OFF"] = new TextBGCToggleMethod(),
+			["TEXT_BGC_ON"] = new TextBGCToggleMethod(),
 
 			["CBGCLEARBUTTON"] = new CBGClearButtonMethod(),
 			["CBGREMOVERANGE"] = new CBGRemoveRangeMethod(),

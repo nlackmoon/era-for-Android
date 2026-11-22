@@ -266,36 +266,52 @@ static class AppContents
 		if (!resourceDic.TryGetValue(parentName, out AbstractImage value))
 		{
 			string filepath = parentName;
-			Bitmap bmp;
-			#region EM_私家版_webp
-			// Bitmap bmp = new Bitmap(filepath);
-			var webpbmp = Utils.LoadImage(filepath);
-			#endregion
-			if (webpbmp == null)
-			{
-				ParserMediator.Warn(string.Format(trerror.FailedLoadFile.Text, arg2), sp, 1);
-				return null;
-			}
-
-			bmp = webpbmp;
-
-			if (bmp.Width > AbstractImage.MAX_IMAGESIZE || bmp.Height > AbstractImage.MAX_IMAGESIZE)
-			{
-				//1824-2 すでに8192以上の幅を持つ画像を利用したバリアントが存在してしまっていたため、警告しつつ許容するように変更
-				//	bmp.Dispose();
-				ParserMediator.Warn(string.Format(trerror.TooLargeImageFile.Text, AbstractImage.MAX_IMAGESIZE.ToString(), arg2), sp, 1);
-				//return null;
-			}
 			ConstImage img = new(parentName);
-			img.CreateFrom(bmp, filepath, Config.TextDrawingMode == TextDrawingMode.WINAPI);
-			if (!img.IsCreated)
+			// 起動時は寸法だけヘッダから読む。実ピクセルは初回描画時に Load が読む。
+			// 以前はここで全画像をデコードして寸法を取り、すぐ Dispose していたため
+			// resources が多いゲームでは起動に 10 秒以上かかっていた。
+			if (img.CreateFromHeader(filepath))
 			{
-				ParserMediator.Warn(string.Format(trerror.FailedCreateResource.Text, arg2), sp, 1);
-				return null;
+				if (img.Width > AbstractImage.MAX_IMAGESIZE || img.Height > AbstractImage.MAX_IMAGESIZE)
+				{
+					//1824-2 すでに8192以上の幅を持つ画像を利用したバリアントが存在してしまっていたため、警告しつつ許容するように変更
+					ParserMediator.Warn(string.Format(trerror.TooLargeImageFile.Text, AbstractImage.MAX_IMAGESIZE.ToString(), arg2), sp, 1);
+				}
+			}
+			else
+			{
+				// ヘッダから判定できない形式 (特殊な webp 等) は従来どおりデコードする
+				Bitmap bmp;
+				#region EM_私家版_webp
+				// Bitmap bmp = new Bitmap(filepath);
+				var webpbmp = Utils.LoadImage(filepath);
+				#endregion
+				if (webpbmp == null)
+				{
+					ParserMediator.Warn(string.Format(trerror.FailedLoadFile.Text, arg2), sp, 1);
+					return null;
+				}
+
+				bmp = webpbmp;
+
+				if (bmp.Width > AbstractImage.MAX_IMAGESIZE || bmp.Height > AbstractImage.MAX_IMAGESIZE)
+				{
+					//1824-2 すでに8192以上の幅を持つ画像を利用したバリアントが存在してしまっていたため、警告しつつ許容するように変更
+					//	bmp.Dispose();
+					ParserMediator.Warn(string.Format(trerror.TooLargeImageFile.Text, AbstractImage.MAX_IMAGESIZE.ToString(), arg2), sp, 1);
+					//return null;
+				}
+				img.CreateFrom(bmp, filepath, Config.TextDrawingMode == TextDrawingMode.WINAPI);
+				if (!img.IsCreated)
+				{
+					ParserMediator.Warn(string.Format(trerror.FailedCreateResource.Text, arg2), sp, 1);
+					return null;
+				}
+				// 寸法だけ取れれば十分なので、デコードした分はすぐ手放す
+				img.Dispose();
 			}
 			value = img;
 			resourceDic.TryAdd(parentName, value);
-			img.Dispose();
 		}
 		if (value is not ConstImage parentImage || !parentImage.IsCreated)
 		{

@@ -60,6 +60,10 @@ namespace MinorShift.Emuera.WebHost
 
 		readonly bool useConfigWidth;
 
+		// 画面から最後に来た要求サイズ。「等比」へ切り替えたときに同じサイズで組み直す
+		int lastRequestedWidth;
+		int lastRequestedHeight;
+
 		/// <summary>オフスクリーン描画の倍率 (1〜3)。文字を端末の画素密度に合わせて鮮明にする。</summary>
 		readonly int renderScale;
 
@@ -465,7 +469,7 @@ namespace MinorShift.Emuera.WebHost
 		{
 			if (engine == null)
 				return;
-			Send(new { t = "metrics", lineHeight = Math.Max(engine.LineHeight, 1), w = Width, h = Height });
+			Send(new { t = "metrics", lineHeight = Math.Max(engine.LineHeight, 1), w = Width, h = Height, font = engine.FontSize });
 		}
 
 		/// <summary>
@@ -717,11 +721,35 @@ namespace MinorShift.Emuera.WebHost
 							// レイアウト確定前は 0 が飛んでくることがある。潰れた画面を作らないよう弾く
 							if (w < 200 || h < 200)
 								break;
+							lastRequestedWidth = w;
+							lastRequestedHeight = h;
 							engine.Resize(w, h);
 							var newSize = engine.ClientSize;
 							Width = newSize.Width;
 							Height = newSize.Height;
 							metricsChanged = true;
+							break;
+
+						// 「等比」表示の切り替え。端末の比で描いていると黒帯が出ず、
+						// 切り替えても何も変わらないように見えるので、描画領域そのものを組み直す
+						case "fit":
+							{
+								bool contain = string.Equals(
+									root.TryGetProperty("v", out var fitValue) ? fitValue.GetString() : null,
+									"contain", StringComparison.OrdinalIgnoreCase);
+								if (engine.KeepNativeAspect == contain)
+									break;
+								engine.KeepNativeAspect = contain;
+								if (lastRequestedWidth >= 200 && lastRequestedHeight >= 200)
+								{
+									engine.Resize(lastRequestedWidth, lastRequestedHeight);
+									var fitSize = engine.ClientSize;
+									Width = fitSize.Width;
+									Height = fitSize.Height;
+									metricsChanged = true;
+									changed = true;
+								}
+							}
 							break;
 
 						case "images":

@@ -6612,6 +6612,21 @@ internal static partial class FunctionMethodCreator
 		}
 	}
 	/// <summary>
+	/// TEXT_BGC_OFF / TEXT_BGC_ON (EE 拡張)
+	/// 本文の背景色を描くかどうかの切り替え。この移植版はテキスト背景を持たないため何もしない。
+	/// </summary>
+	public sealed class TextBGCToggleMethod : FunctionMethod
+	{
+		public TextBGCToggleMethod()
+		{
+			ReturnType = typeof(long);
+			argumentTypeArray = [];
+			CanRestructure = false;
+		}
+		public override long GetIntValue(ExpressionMediator exm, List<AExpression> arguments) => 1;
+	}
+
+	/// <summary>
 	/// CBGCLEARBUTTON
 	/// </summary>
 	public sealed class CBGClearButtonMethod : FunctionMethod

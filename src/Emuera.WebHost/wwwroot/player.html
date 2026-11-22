@@ -12,6 +12,7 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .ico{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;padding:0;color:var(--ink);background:rgba(14,18,12,.55);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .12s,background .16s}
 .ico:active{transform:scale(.92);background:rgba(40,52,33,.8)}
 .ico.skip{background:rgba(200,238,173,.88);color:#1b2416;border-color:transparent}
+.ico.fnt{font-size:13px;font-weight:700;letter-spacing:-.5px}
 #status{position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(8px + env(safe-area-inset-top));z-index:5;display:flex;align-items:center;gap:7px;font-size:11px;line-height:1;padding:8px 11px;border-radius:20px;background:rgba(12,16,10,.5);border:1px solid var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:.9;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #status i{width:6px;height:6px;border-radius:50%;background:#a8d98a;flex:none}
 #status.bad i{background:#ff9d94}
@@ -36,6 +37,16 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 #choices button{min-width:0;width:100%;text-align:left;padding:calc(9px * var(--cs,1)) calc(11px * var(--cs,1));border-radius:calc(11px * var(--cs,1));background:rgba(8,10,7,.30);border:1px solid rgba(255,255,255,.18);color:var(--ink);font-size:calc(13px * var(--cs,1));line-height:1.35;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:block;overflow:hidden}
 #choices .ctext{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;word-break:break-word}
 #choices button:active{background:rgba(80,100,65,.55)}
+/* 虚拟手柄：左下に D パッド + A/B。数字キーパッド (右下) と重ならない位置に置く */
+#gp{position:absolute;left:calc(10px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));z-index:7;display:flex;align-items:flex-end;gap:10px;transition:opacity .3s}
+#gp[hidden]{display:none}
+#gp .dpad{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,46px);gap:5px}
+#gp .dpad button{width:46px;height:46px;border-radius:13px;background:rgba(8,10,7,.34);border:1px solid rgba(255,255,255,.2);color:var(--ink);font-size:14px;line-height:1;display:grid;place-items:center;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+#gp .acts{display:flex;flex-direction:column;gap:7px}
+#gp .acts button{width:54px;height:54px;border-radius:50%;font-size:15px;font-weight:700;background:rgba(8,10,7,.4);border:1px solid rgba(255,255,255,.22);color:var(--ink);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+#gp .acts .a{background:rgba(200,238,173,.82);color:#1b2416;border-color:transparent}
+#gp button:active{background:rgba(80,100,65,.62);transform:scale(.95)}
+#gp .acts .a:active{background:rgba(220,250,195,.95)}
 .seg{display:flex;border:1px solid rgba(255,255,255,.16);border-radius:9px;overflow:hidden;flex:none}
 .seg button{padding:6px 12px;font-size:12px;background:rgba(0,0,0,.25);color:var(--muted)}
 .seg button.on{background:rgba(200,238,173,.85);color:#1b2416;font-weight:650}
@@ -63,17 +74,34 @@ input[type=range]{flex:1;min-width:0;accent-color:#8fc56c;margin:0}
 @media(min-width:700px){#sheet{align-items:center}.card{border-radius:18px}}
 @media(max-height:340px){.ico{width:36px;height:36px}#status{font-size:10px;padding:6px 9px}}
 </style></head><body>
-<svg style="display:none"><symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol><symbol id="i-keys" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 9h.1M11 9h.1M15 9h.1M7 13h.1M11 13h.1M15 13h.1M7 17h10"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h7m4 0h5M4 17h3m4 0h9"/><circle cx="13" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol><symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/></symbol><symbol id="i-del" viewBox="0 0 24 24"><path d="M3 12l5-7h13v14H8zM12 9l6 6m0-6-6 6"/></symbol></svg>
+<svg style="display:none"><symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol><symbol id="i-keys" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 9h.1M11 9h.1M15 9h.1M7 13h.1M11 13h.1M15 13h.1M7 17h10"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h7m4 0h5M4 17h3m4 0h9"/><circle cx="13" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol><symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/></symbol><symbol id="i-del" viewBox="0 0 24 24"><path d="M3 12l5-7h13v14H8zM12 9l6 6m0-6-6 6"/></symbol><symbol id="i-pad" viewBox="0 0 24 24"><path d="M7 8h10a4 4 0 0 1 3.9 4.9l-.7 3.4A2.6 2.6 0 0 1 15.9 17l-1.6-1.7h-4.6L8.1 17a2.6 2.6 0 0 1-4.3-1.7l-.7-3.4A4 4 0 0 1 7 8z"/><path d="M8 11v3M6.5 12.5h3M15.5 11.6h.1M17.4 13.4h.1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 7.5-1.9"/></symbol></svg>
 <div id="stage">
  <img id="screen" alt="游戏画面" draggable="false">
  <div id="status"><i></i><span id="statustext">连接中</span></div>
  <div id="float">
   <button class="ico skip" id="skip" aria-label="跳过对话"><svg><use href="#i-skip"/></svg></button>
-  <button class="ico" id="back" aria-label="返回游戏库"><svg><use href="#i-back"/></svg></button>
+  <button class="ico" id="gpbtn" aria-label="虚拟手柄"><svg><use href="#i-pad"/></svg></button>
+  <button class="ico" id="orient" aria-label="转向锁"><svg><use href="#i-unlock"/></svg></button>
+  <button class="ico fnt" id="fontminus" aria-label="字号减小">A−</button>
+  <button class="ico fnt" id="fontplus" aria-label="字号增大">A+</button>
   <button class="ico" id="keys" aria-label="数字键盘"><svg><use href="#i-keys"/></svg></button>
   <button class="ico" id="menu" aria-label="设置"><svg><use href="#i-menu"/></svg></button>
+  <button class="ico" id="back" aria-label="返回游戏库"><svg><use href="#i-back"/></svg></button>
  </div>
  <button id="latest" hidden>回到最新 ↓</button>
+ <aside id="gp" hidden aria-label="虚拟手柄">
+  <div class="dpad">
+   <button data-gp="up" aria-label="上一行" style="grid-column:2;grid-row:1">▲</button>
+   <button data-gp="left" aria-label="上一页" style="grid-column:1;grid-row:2">◀</button>
+   <button data-gp="latest" aria-label="回到最新" style="grid-column:2;grid-row:2">●</button>
+   <button data-gp="right" aria-label="下一页" style="grid-column:3;grid-row:2">▶</button>
+   <button data-gp="down" aria-label="下一行" style="grid-column:2;grid-row:3">▼</button>
+  </div>
+  <div class="acts">
+   <button class="a" data-gp="a" aria-label="确认">A</button>
+   <button data-gp="b" aria-label="取消">B</button>
+  </div>
+ </aside>
  <aside id="pad" aria-label="数字键盘">
   <div class="inrow"><input id="text" type="text" inputmode="none" autocomplete="off" placeholder="输入数字" maxlength="2000"><button id="send" disabled><span id="sendlabel">确认</span></button></div>
   <div class="keys">
@@ -88,7 +116,7 @@ input[type=range]{flex:1;min-width:0;accent-color:#8fc56c;margin:0}
  <div id="sheet" hidden>
   <div class="card">
    <h3>显示设置</h3>
-   <p>屏幕大小缩放整个游戏窗口；字号由游戏自身的 emuera.config 决定。按钮几秒后会自动变淡。</p>
+   <p>屏幕大小缩放整个游戏窗口；字号用顶栏 A− / A+ 调整，重新进入游戏后生效。按钮几秒后会自动变淡。</p>
  <div class="rows">
    <div class="row"><span>屏幕大小</span><input id="zoom" type="range" min="70" max="130" step="5" value="100"><output id="zoomval">100%</output></div>
    <div class="row"><span>缩放方式</span><div class="seg"><button id="fit-fill" class="on">铺满</button><button id="fit-contain">等比</button></div></div>
@@ -113,8 +141,8 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const stage=$('stage'),screen=$('screen'),text=$('text'),pad=$('pad'),sheet=$('sheet');
 const token=new URLSearchParams(location.search).get('token');
 let ws=null,mode='loading',single=false,inflight=false,ready=false,manualKb=false;
-let setting={scale:1,images:true,haptic:true,pad:true,padAlpha:.35,fit:'fill',choiceScale:1,choiceCols:2,showChoices:true};let choicesVisible=false,padSuppressed=false,lastChoices=[];
-let engineW=1000,engineH=420,lineHeight=20,pan=0,zoom=1,scrollPos=0,scrollMax=0;
+let setting={scale:1,images:true,haptic:true,pad:true,padAlpha:.35,fit:'fill',choiceScale:1,choiceCols:2,showChoices:true,gamepad:false,lock:false,fontSize:0};let choicesVisible=false,padSuppressed=false,lastChoices=[];
+let engineW=1000,engineH=420,lineHeight=20,engineFont=18,pan=0,zoom=1,scrollPos=0,scrollMax=0;
 let frameURL=null,toastTimer=0,retryTimer=0,resizeTimer=0,dimTimer=0,retries=0;
 
 function native(action,value){try{window.Android&&window.Android.call(JSON.stringify({action,value}));}catch(e){}}
@@ -144,13 +172,18 @@ function applySettings(){
  $('padalpha').value=Math.round(setting.padAlpha*100);$('padalphaval').value=Math.round(setting.padAlpha*100)+'%';
  applyChoiceLayout();
  syncPad();
+ syncGp();
+ syncOrient();
+ syncFont();
  send({t:'images',v:!!setting.images});
+ send({t:'fit',v:setting.fit});
 }
 function layout(){
  const contain=setting.fit==='contain';
  screen.style.objectFit=contain?'contain':'fill';
  if(contain){
-  // 等比：不拉伸，交给 object-fit:contain 保持比例居中，四周留黑边。
+  // 等比：エンジン側もゲーム本来の縦横比で描き直すので、ここは黒帯を付けて中央に置くだけ。
+  // (端末の比で描いたままだと黒帯が出ず、切り替えても何も変わらない)
   screen.style.transform='none';
   pan=0;
  }else{
@@ -159,6 +192,17 @@ function layout(){
   pan=Math.max(-m,Math.min(m,pan));
   screen.style.transform='translateX('+pan+'px) scale('+zoom+')';
  }
+}
+/** 実際に絵が描かれている矩形。等比のときは左右（または上下）に黒帯が付くので、
+ *  クリック座標とスクロール量はこの矩形を基準にしないとずれる。 */
+function contentRect(){
+ const r=screen.getBoundingClientRect();
+ if(setting.fit!=='contain')return r;
+ const ar=(screen.naturalWidth&&screen.naturalHeight)?screen.naturalWidth/screen.naturalHeight:(engineW/engineH);
+ if(!ar||!isFinite(ar))return r;
+ const box=r.width/r.height;
+ if(box>ar){const w=r.height*ar;return {left:r.left+(r.width-w)/2,top:r.top,width:w,height:r.height};}
+ const h=r.width/ar;return {left:r.left,top:r.top+(r.height-h)/2,width:r.width,height:h};
 }
 function applyChoiceLayout(){
  setting.choiceScale=Math.max(.7,Math.min(1.3,Number(setting.choiceScale)||1));
@@ -201,13 +245,13 @@ function connect(){
  setStatus('连接中',false,false);
  ws=new WebSocket('ws://'+location.host+'/ws'+(token?'?token='+encodeURIComponent(token):''));
  ws.binaryType='arraybuffer';
- ws.onopen=()=>{retries=0;send({t:'hello',binary:true});send({t:'images',v:!!setting.images});resize();};
+ ws.onopen=()=>{retries=0;send({t:'hello',binary:true});send({t:'images',v:!!setting.images});send({t:'fit',v:setting.fit});resize();};
  ws.onmessage=e=>{
   if(e.data instanceof ArrayBuffer){frame(e.data);return;}
   let m;try{m=JSON.parse(e.data)}catch(_){return}
   switch(m.t){
    case 'title':document.title=m.v+' · era for Android';break;
-   case 'metrics':engineW=Math.max(1,m.w||engineW);engineH=Math.max(1,m.h||engineH);lineHeight=Math.max(1,m.lineHeight||lineHeight);layout();break;
+   case 'metrics':engineW=Math.max(1,m.w||engineW);engineH=Math.max(1,m.h||engineH);lineHeight=Math.max(1,m.lineHeight||lineHeight);if(m.font)engineFont=Number(m.font)||engineFont;layout();break;
    case 'state':single=!!m.single;setMode(m.v);setChoices(m.choices);break;
    case 'input':text.value=m.v||'';break;
    case 'tap':inflight=false;updateSend();break;
@@ -236,7 +280,16 @@ function frame(buf){
  img.onerror=()=>{URL.revokeObjectURL(url);send({t:'ack'})};
  img.src=url;
 }
-function setScroll(s,max){s=Number(s)||0;max=Number(max)||0;scrollPos=s;scrollMax=max;$('latest').hidden=s>=max;}
+function setScroll(s,max){
+ s=Number(s)||0;max=Number(max)||0;scrollPos=s;scrollMax=max;
+ $('latest').hidden=s>=max;
+ if(s>=max){browsing=false;return;}
+ // 履歴を遡っていないのに最下部から離れている = 行が増えたときに取り残された状態。
+ // そのままだと新しい文が画面の外に出るので、そっと最新へ戻す
+ if(!browsing&&!followTick){
+  followTick=setTimeout(()=>{followTick=0;if(!browsing&&scrollPos<scrollMax)send({t:'latest'});},140);
+ }
+}
 
 function syncPad(){
  // 选项面板显示时收起数字键盘；否则按常驻开关显示。
@@ -245,6 +298,32 @@ function syncPad(){
  pad.style.setProperty('--pad-k',Math.min(.72,setting.padAlpha+.12));
  $('sw-pad').setAttribute('aria-checked',String(!!setting.pad));
  $('sw-choices').setAttribute('aria-checked',String(!!setting.showChoices));
+}
+function syncGp(){
+ const on=!!setting.gamepad;
+ $('gp').hidden=!on;
+ $('gpbtn').setAttribute('aria-checked',String(on));
+ $('gpbtn').style.background=on?'rgba(200,238,173,.82)':'';
+ $('gpbtn').style.color=on?'#1b2416':'';
+}
+function syncOrient(){
+ const on=!!setting.lock;
+ const use=document.getElementById('i-lock-use')||document.querySelector('#orient use');
+ if(use)use.setAttribute('href',on?'#i-lock':'#i-unlock');
+ $('orient').setAttribute('aria-checked',String(on));
+ $('orient').style.background=on?'rgba(200,238,173,.82)':'';
+ $('orient').style.color=on?'#1b2416':'';
+}
+function syncFont(){
+ const v=Number(setting.fontSize)||0;
+ $('fontminus').style.opacity=v>0? '1':'.55';
+ $('fontplus').style.opacity='1';
+}
+function setFont(delta){
+ const base=(Number(setting.fontSize)>0?Number(setting.fontSize):engineFont);
+ const v=Math.max(10,Math.min(44,base+delta));
+ setting.fontSize=v;syncFont();native('settings',setting);
+ toast('字号 '+v+' · 重新进入游戏后生效');
 }
 function setChoices(list){
  const box=$('choices'),arr=Array.isArray(list)?list:[];
@@ -279,16 +358,30 @@ $('del').oncontextmenu=e=>{e.preventDefault();text.value=''};
 $('kb').onclick=()=>{manualKb=!manualKb;text.inputMode=manualKb?'text':'none';if(manualKb){text.focus();toast('可输入文字、负数或粘贴内容')}else text.blur()};
 $('send').onclick=submit;
 $('keys').onclick=()=>{haptic();setting.pad=!setting.pad;syncPad();native('settings',setting)};
+$('gpbtn').onclick=()=>{haptic();setting.gamepad=!setting.gamepad;syncGp();native('settings',setting)};
+$('orient').onclick=()=>{haptic();setting.lock=!setting.lock;syncOrient();native('orient',!!setting.lock);native('settings',setting)};
+$('fontminus').onclick=()=>{haptic();setFont(-1)};
+$('fontplus').onclick=()=>{haptic();setFont(1)};
+document.querySelectorAll('#gp [data-gp]').forEach(b=>b.onclick=()=>{
+ const k=b.dataset.gp;haptic();
+ if(k==='a'){if(/^[-+]?\d+$/.test(text.value.trim()))submit();else send({t:'enter'});}
+ else if(k==='b')send({t:'skip'});
+ else if(k==='latest'){browsing=false;send({t:'latest'});}
+ else if(k==='up')queueScroll(3);
+ else if(k==='down')queueScroll(-3);
+ else if(k==='left')queueScroll(10);
+ else if(k==='right')queueScroll(-10);
+});
 $('menu').onclick=()=>{haptic();openSheet()};
 $('skip').onclick=()=>{haptic();send({t:'skipall'})};
 $('back').onclick=()=>native('home');
 $('done').onclick=()=>{sheet.hidden=true};
-$('latest').onclick=()=>send({t:'latest'});
+$('latest').onclick=()=>{browsing=false;send({t:'latest'})};
 $('status').onclick=()=>{if(!ws||ws.readyState>1)connect()};
 $('sheet').onclick=e=>{if(e.target===$('sheet'))sheet.hidden=true};
 $('zoom').oninput=()=>{setting.scale=Number($('zoom').value)/100;zoom=setting.scale;$('zoomval').value=$('zoom').value+'%';layout()};
-$('fit-fill').onclick=()=>{setting.fit='fill';syncFit();layout();native('settings',setting)};
-$('fit-contain').onclick=()=>{setting.fit='contain';syncFit();layout();native('settings',setting)};
+$('fit-fill').onclick=()=>{setting.fit='fill';syncFit();layout();send({t:'fit',v:'fill'});native('settings',setting)};
+$('fit-contain').onclick=()=>{setting.fit='contain';syncFit();layout();send({t:'fit',v:'contain'});native('settings',setting)};
 $('zoom').onchange=()=>native('settings',setting);
 $('sw-images').onclick=()=>{setting.images=!setting.images;applySettings();native('settings',setting)};
 $('sw-haptic').onclick=()=>{setting.haptic=!setting.haptic;applySettings();native('settings',setting)};
@@ -299,7 +392,7 @@ $('padalpha').onchange=()=>native('settings',setting);
 $('choicescale').oninput=()=>{setting.choiceScale=Number($('choicescale').value)/100;applyChoiceLayout()};
 document.querySelectorAll('#choicecols [data-cols]').forEach(b=>b.onclick=()=>{setting.choiceCols=Number(b.dataset.cols);applyChoiceLayout();native('settings',setting)});
 $('choicescale').onchange=()=>native('settings',setting);
-$('reset').onclick=()=>{setting.scale=1;setting.fit='fill';setting.images=true;setting.pad=true;setting.padAlpha=.35;setting.choiceScale=1;setting.choiceCols=2;setting.showChoices=true;applySettings();native('settings',setting)};
+$('reset').onclick=()=>{setting.scale=1;setting.fit='fill';setting.images=true;setting.pad=true;setting.padAlpha=.35;setting.choiceScale=1;setting.choiceCols=2;setting.showChoices=true;setting.gamepad=false;setting.lock=false;setting.fontSize=0;applySettings();native('settings',setting);native('orient',false)};
 $('savehelp').onclick=()=>toast('用游戏内菜单存档；游戏库可导出/恢复存档备份');
 
 text.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
@@ -311,10 +404,15 @@ document.addEventListener('keydown',e=>{
  else if(e.key==='Escape'){sheet.hidden=true;}
 });
 
-let g=null,scrollPending=0,scrollTick=0;
-function queueScroll(n){scrollPending+=n;if(!scrollTick)scrollTick=setTimeout(()=>{send({t:'scrollLines',n:scrollPending});scrollPending=0;scrollTick=0},35)}
+let g=null,scrollPending=0,scrollTick=0,browsing=false,followTick=0;
+function queueScroll(n){
+ // 上へ遡る操作をしたら「履歴を見ている」とみなし、勝手に最新へ戻さない
+ if(n>0)browsing=true;
+ scrollPending+=n;
+ if(!scrollTick)scrollTick=setTimeout(()=>{send({t:'scrollLines',n:scrollPending});scrollPending=0;scrollTick=0},35);
+}
 stage.addEventListener('pointerdown',e=>{
- if(e.target.closest('button,input,#pad,#sheet,#float,#status'))return;
+ if(e.target.closest('button,input,#pad,#sheet,#float,#status,#gp,#choices'))return;
  wake();
  g={id:e.pointerId,x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY,moved:false,t:performance.now()};
  try{stage.setPointerCapture(e.pointerId)}catch(_){}
@@ -324,9 +422,9 @@ stage.addEventListener('pointermove',e=>{
  const dx=e.clientX-g.lx,dy=e.clientY-g.ly;
  if(Math.hypot(e.clientX-g.x,e.clientY-g.y)>8)g.moved=true;
  if(g.moved){
-  if(Math.abs(e.clientX-g.x)>Math.abs(e.clientY-g.y)+6&&zoom>1){pan+=dx;layout();}
+  if(Math.abs(e.clientX-g.x)>Math.abs(e.clientY-g.y)+6&&zoom>1&&setting.fit!=='contain'){pan+=dx;layout();}
   else{
-   const r=screen.getBoundingClientRect();
+   const r=contentRect();
    const px=Math.max(10,lineHeight*(r.width/engineW));
    const n=Math.trunc(dy/px);
    if(n){queueScroll(n);g.ly=e.clientY;}
@@ -339,7 +437,7 @@ stage.addEventListener('pointerup',e=>{
  const moved=g.moved,dur=performance.now()-g.t,x=e.clientX,y=e.clientY;
  g=null;
  if(moved||!ready||inflight)return;
- const r=screen.getBoundingClientRect();
+ const r=contentRect();
  if(r.width<=0||r.height<=0)return;
  const gx=Math.round((x-r.left)*engineW/r.width),gy=Math.round((y-r.top)*engineH/r.height);
  if(gx<0||gy<0||gx>=engineW||gy>=engineH)return;
@@ -356,4 +454,6 @@ window.Era={
  error:v=>toast(v)
 };
 applySettings();connect();wake();
+// 前回の向き固定を復元 (設定はゲームごとに保存されている)
+if(setting.lock)native('orient',true);
 </script></body></html>

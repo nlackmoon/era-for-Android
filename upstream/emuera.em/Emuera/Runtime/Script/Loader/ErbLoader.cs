@@ -55,6 +55,15 @@ internal sealed class ErbLoader
 		List<string> isOnlyEvent = [];
 		noError = true;
 		var starttime = DateTime.Now;
+		var prof = System.Diagnostics.Stopwatch.StartNew();
+		void Prof(string tag)
+		{
+			if (Program.BootProfile)
+			{
+				System.Console.Error.WriteLine($"ERB.{tag} {prof.ElapsedMilliseconds}ms");
+				try { System.IO.File.AppendAllText(Program.ExeDir + "time.log", $"ERB.{tag} {prof.ElapsedMilliseconds}ms\n"); } catch { }
+			}
+		}
 		try
 		{
 			labelDic.RemoveAll();
@@ -96,6 +105,7 @@ internal sealed class ErbLoader
 #endif
 				await Task.Run(() => loadErb(file, filename, isOnlyEvent));
 			};
+			Prof("LoadAll");
 			ParserMediator.FlushWarningList();
 #if DEBUG
 			output.PrintSystemLine(string.Format(trsl.ElapsedTime.Text, (DateTime.Now - starttime).TotalMilliseconds));
@@ -103,6 +113,7 @@ internal sealed class ErbLoader
 			if (displayReport)
 				output.PrintSystemLine(trsl.BuildingUserFunc.Text);
 			setLabelsArg();
+			Prof("SetLabelsArg");
 			ParserMediator.FlushWarningList();
 			labelDic.Initialized = true;
 #if DEBUG
@@ -112,6 +123,7 @@ internal sealed class ErbLoader
 				output.PrintSystemLine(trsl.CheckingSyntax.Text);
 
 			await Task.Run(() => ParseScript());
+			Prof("ParseScript");
 
 			ParserMediator.FlushWarningList();
 

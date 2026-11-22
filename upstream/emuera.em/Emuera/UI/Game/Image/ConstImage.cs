@@ -40,6 +40,26 @@ internal sealed class ConstImage : AbstractImage
 		return;
 	}
 
+	/// <summary>
+	/// 画像をデコードせず、ヘッダから寸法だけ読んで「作成済み」にする。
+	/// 実ピクセルは <see cref="Bitmap"/> を初めて参照したときに <see cref="Load"/> が読む。
+	/// resources の全画像を起動時にデコードしていたのを避けるための入口。
+	/// </summary>
+	internal bool CreateFromHeader(string filepath)
+	{
+		if (RealBitmap != null || !string.IsNullOrEmpty(Filepath))
+			return false;
+		if (!ImgUtils.TryReadImageSize(filepath, out int w, out int h))
+			return false;
+		if (w <= 0 || h <= 0)
+			return false;
+		Filepath = filepath;
+		Width = w;
+		Height = h;
+		RealIsCreated = true;
+		return true;
+	}
+
 	public void Load()
 	{
 		if (RealBitmap != null || !RealIsCreated)
