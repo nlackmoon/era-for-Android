@@ -41,7 +41,15 @@ internal sealed partial class EraStreamReader : IDisposable
 		nextNo = 0;
 		try
 		{
-			_fileLines = File.ReadAllLines(filepath, EncodingHandler.DetectEncoding(path));
+			// 判定と読み込みを 1 パスにまとめる (旧: 判定で 1〜2 回、本読みで 1 回、
+			// 同じファイルを丸ごと何度も復号していた)
+			byte[] bytes = File.ReadAllBytes(MinorShift.Emuera.Compat.CasePath.Resolve(path));
+			if (!EncodingHandler.TryDecodeText(bytes, out string text))
+			{
+				Dispose();
+				return false;
+			}
+			_fileLines = SplitLines(text);
 		}
 		catch
 		{
@@ -49,6 +57,24 @@ internal sealed partial class EraStreamReader : IDisposable
 			return false;
 		}
 		return true;
+	}
+
+	/// <summary>File.ReadAllLines と同じ行分割 (CRLF / LF、末尾改行で増える空行は落とす)。</summary>
+	static string[] SplitLines(string text)
+	{
+		if (string.IsNullOrEmpty(text))
+			return [];
+		string[] raw = text.Split('\n');
+		int count = raw.Length;
+		if (count > 0 && raw[count - 1].Length == 0)
+			count--;
+		string[] lines = new string[count];
+		for (int i = 0; i < count; i++)
+		{
+			string line = raw[i];
+			lines[i] = line.Length > 0 && line[^1] == '\r' ? line[..^1] : line;
+		}
+		return lines;
 	}
 	public bool OpenOnCache(string path)
 	{

@@ -92,4 +92,58 @@ public static class EncodingHandler
 		Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 		return Encoding.GetEncoding(codePage, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
 	}
+
+	/// <summary>
+	/// バイト列を「判定しながら一度だけ」復号する。
+	///
+	/// 以前は DetectEncoding が UTF-8 で全読み → 失敗 → Shift-JIS で全読み、
+	/// そのあと File.ReadAllLines がもう一度全読みしていた。
+	/// 8,000 ファイル / 300 MB 級のゲームではこの二重読みだけで数秒かかるので、
+	/// 判定と本読みを 1 パスにまとめる。判定順は DetectEncoding と同じ
+	/// (UTF-8 → Shift-JIS → GB18030 → Big5)。
+	/// </summary>
+	public static bool TryDecodeText(byte[] bytes, out string text)
+	{
+		text = null;
+		if (bytes == null || bytes.Length == 0)
+		{
+			text = string.Empty;
+			return true;
+		}
+		//BOM 付き UTF-16
+		if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+		{
+			text = Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
+			return true;
+		}
+		if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+		{
+			text = Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2);
+			return true;
+		}
+		int start = 0;
+		if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+			start = 3;
+		try
+		{
+			//UTF8Encoding は throwOnInvalidBytes = true なので、不正バイトで例外になる
+			text = UTF8Encoding.GetString(bytes, start, bytes.Length - start);
+			return true;
+		}
+		catch (DecoderFallbackException)
+		{
+		}
+		foreach (Encoding encoding in new[] { shiftjisEncoding, GetEncoding(54936), GetEncoding(950) })
+		{
+			try
+			{
+				text = encoding.GetString(bytes);
+				return true;
+			}
+			catch (DecoderFallbackException)
+			{
+			}
+		}
+		return false;
+	}
 }
