@@ -12,6 +12,19 @@
 
 ## 本分支改了什么
 
+### 画蛇添足版兼容修正（mod13）
+
+- **汉化词典导入 0 行**：`SQL_IMPORT_MAP_XML` 原来用
+  `XmlReader.ReadElementContentAsString()` 逐元素读，这个方法读完一个元素后
+  游标已经移到下一个节点，外层 `while (reader.Read())` 会多跳一格，
+  `<v>` 永远读不到 —— `CSV_MAP` 导入结果 0 行，所有名词查询落空，
+  于是满屏「※未能找到XX翻译，请保存日志报错」。改为 `XmlDocument` 读入后
+  `CSV_MAP` 7721 行、`TASTE_MAP` 3944 行，报错归零。
+- **警告行混进选项面板**：引擎给每条解析警告都挂了一个「跳到该行」按钮，
+  选择枝面板把所有 `IsButton` 都当成选项，272 条警告变成 272 张卡片盖住画面。
+  新增 `ConsoleButtonString.IsErrorButton`，`PrintErrorButton` 里打标，
+  选择枝与「可选按钮数」都跳过它；标题画面恢复成 3 个真选项。
+
 ### 字号与「看不全」（mod12）
 
 - **字号缩小时行高同比缩小**：以前只改 `FONT SIZE`，`LINE HEIGHT` 原样保留，

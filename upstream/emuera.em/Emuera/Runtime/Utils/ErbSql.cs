@@ -21,6 +21,25 @@ internal static class ErbSql
 	static string lastConnectionName;
 	static long nextReaderId = 1;
 
+	// ERAFLOW_SQL_LOG=1 のときだけ、接続・取り込み・空振りした SELECT を
+	// %TEMP%/eraflow-sql.log に書き出す。翻訳テーブルが引けない不具合の切り分け用。
+	static int diagMisses;
+	internal static void Diag(string message)
+	{
+		if (Environment.GetEnvironmentVariable("ERAFLOW_SQL_LOG") is not { Length: > 0 })
+			return;
+		try
+		{
+			System.IO.File.AppendAllText(
+				System.IO.Path.Combine(System.IO.Path.GetTempPath(), "eraflow-sql.log"),
+				DateTime.Now.ToString("HH:mm:ss.fff") + " " + message + Environment.NewLine);
+		}
+		catch
+		{
+			// 診断ログが書けないだけなので無視する
+		}
+	}
+
 	static string TempDir => Config.Config.SavDir + "temp_db" + Path.DirectorySeparatorChar;
 
 	public static void ConnectionOpen(string name)
@@ -210,6 +229,7 @@ internal static class ErbSql
 
 		namedConnections[name] = conn;
 		lastConnectionName = name;
+		Diag($"[connect] {name} -> {path}");
 
 		using SqliteCommand command = conn.CreateCommand();
 		command.CommandText = "PRAGMA journal_mode = OFF;PRAGMA synchronous = OFF;";
@@ -318,7 +338,13 @@ internal static class ErbSql
 		using SqliteCommand command = conn.CreateCommand();
 		command.CommandText = sql;
 		BindParameters(command, parameters);
-		return command.ExecuteScalar();
+		object result = command.ExecuteScalar();
+		if (diagMisses < 40 && (result == null || result is DBNull || (result is string text && text.Length == 0)))
+		{
+			diagMisses++;
+			Diag($"[scalar-miss] {name ?? "<default>"} | {sql} | conn={(name ?? lastConnectionName)}");
+		}
+		return result;
 	}
 
 	public static void CloseReaderById(string methodName, long readerID) => CloseReader(readerID);
@@ -334,6 +360,7 @@ internal static class ErbSql
 		string path = xmlPath ?? string.Empty;
 		if (!Path.IsPathRooted(path))
 			path = Path.Combine(Program.ExeDir, path.Replace('\\', Path.DirectorySeparatorChar));
+		Diag($"[import-start] {name}.{table} <- {path} exists={System.IO.File.Exists(path)}");
 		if (!System.IO.File.Exists(path))
 			throw new CodeEE(string.Format(trerror.SqlNoConnection.Text, methodName) + " (" + xmlPath + ")");
 
@@ -353,37 +380,28 @@ internal static class ErbSql
 			int count = 0;
 			try
 			{
-				using System.Xml.XmlReader reader = System.Xml.XmlReader.Create(path);
-				string k = null, v = null;
-				string current = null;
-				while (reader.Read())
+				// XmlReader で 1 ノードずつ進めるより XmlDocument の方が確実。
+				// （ReadElementContentAsString は次のノードまで進むので、
+				//   外側の while(Read()) と組み合わせると 1 要素飛ばして 0 行になる）
+				System.Xml.XmlDocument doc = new();
+				doc.Load(path);
+				if (doc.DocumentElement != null)
 				{
-					if (reader.NodeType == System.Xml.XmlNodeType.Element)
+					foreach (System.Xml.XmlNode node in doc.DocumentElement.ChildNodes)
 					{
-						current = reader.Name;
-						if (current == "p")
-						{
-							k = null;
-							v = null;
-						}
-						else if (current == "k" || current == "v")
-						{
-							string text = reader.ReadElementContentAsString();
-							if (current == "k")
-								k = text;
-							else
-								v = text;
-							current = null;
-							if (k != null && v != null)
-							{
-								key.Value = k;
-								value.Value = v;
-								insert.ExecuteNonQuery();
-								count++;
-								k = null;
-								v = null;
-							}
-						}
+						if (node is not System.Xml.XmlElement p || p.Name != "p")
+							continue;
+						System.Xml.XmlElement kEl = p["k"];
+						System.Xml.XmlElement vEl = p["v"];
+						// <p><k>..</k><v>..</v></p> と <p k=".." v=".."/> の両方を受ける
+						string k = kEl != null ? kEl.InnerText : (p.HasAttribute("k") ? p.GetAttribute("k") : null);
+						string v = vEl != null ? vEl.InnerText : (p.HasAttribute("v") ? p.GetAttribute("v") : null);
+						if (k == null || v == null)
+							continue;
+						key.Value = k;
+						value.Value = v;
+						insert.ExecuteNonQuery();
+						count++;
 					}
 				}
 			}
@@ -391,6 +409,7 @@ internal static class ErbSql
 			{
 				transaction.Commit();
 			}
+			Diag($"[import-done] {name}.{table} rows={count}");
 			return count;
 		}
 	}

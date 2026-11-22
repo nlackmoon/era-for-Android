@@ -464,6 +464,9 @@ internal sealed partial class EmueraConsole : IDisposable
 		ConsoleDisplayLine dispLine = printBuffer.AppendAndFlushErrButton(str, errerStyle, ErrorButtonsText, pos, stringMeasure);
 		if (dispLine == null)
 			return;
+		//この行のボタンは「警告行へジャンプ」用で、選択肢ではない
+		foreach (ConsoleButtonString button in dispLine.Buttons)
+			button.IsErrorButton = true;
 		addDisplayLine(dispLine, true);
 		RefreshStrings(false);
 	}

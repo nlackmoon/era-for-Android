@@ -118,6 +118,12 @@ internal sealed class ConsoleButtonString
 
 	public ConsoleDisplayLine ParentLine { get; set; }
 	public bool IsButton { get; private set; }
+
+	/// <summary>
+	/// 警告・エラー行に付く「その行へ飛ぶ」ボタン。IsButton は true だが選択肢ではないので、
+	/// Android 側の選択肢パネルには出さない (eraTW の起動時 CSV 警告が数百個並ぶのを防ぐ)。
+	/// </summary>
+	public bool IsErrorButton { get; set; }
 	public bool IsInteger { get; private set; }
 	public long Input { get; private set; }
 	public string Inputs { get; private set; }

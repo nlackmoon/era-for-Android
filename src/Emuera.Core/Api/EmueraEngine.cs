@@ -12,6 +12,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace MinorShift.Emuera.Api
@@ -497,9 +498,23 @@ namespace MinorShift.Emuera.Api
 					foreach (var button in buttons)
 						button?.BuildString(builder);
 				}
-				result[i - from] = builder.ToString();
+				result[i - from] = CleanDumpLine(builder.ToString());
 			}
 			return result;
+		}
+
+		// HTML_PRINT で出した行は BuildString がタグ付きのまま返す。
+		// 「全文」パネルは素の文章を読む場所なので、既知のタグだけ落として実文字にする。
+		static readonly Regex HtmlTagPattern = new(
+			@"</?(?:div|span|button|shape|font|b|i|em|strong|br|hr|p|img|a|nobr|ruby|rt|rp|small|big|u|s)\b[^>]*>",
+			RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+		static string CleanDumpLine(string text)
+		{
+			if (string.IsNullOrEmpty(text) || text.IndexOf('<') < 0)
+				return text;
+			string stripped = HtmlTagPattern.Replace(text, "");
+			return stripped.IndexOf('&') >= 0 ? System.Net.WebUtility.HtmlDecode(stripped) : stripped;
 		}
 
 		/// <summary>
@@ -612,7 +627,7 @@ namespace MinorShift.Emuera.Api
 		{
 			if (console == null) return [];
 			return console.DisplayLineList.SelectMany(l => l.Buttons)
-				.Where(b => b.IsButton && b.Generation == console.LastButtonGeneration)
+				.Where(b => b.IsButton && !b.IsErrorButton && b.Generation == console.LastButtonGeneration)
 				.Select(b => (object)new { text = b.ToString(), value = b.IsInteger ? b.Input.ToString(System.Globalization.CultureInfo.InvariantCulture) : b.Inputs }).ToArray();
 		}
 		public int SelectableButtonCount()
@@ -628,7 +643,11 @@ namespace MinorShift.Emuera.Api
 				foreach (var button in lines[i].Buttons)
 				{
 					if (button.Generation == generation)
-						count++;
+					{
+						//警告行のジャンプボタンは「選択肢の数」に数えない
+						if (!button.IsErrorButton)
+							count++;
+					}
 					else if (button.Generation != 0)
 						return count;   // 後ろから回しているので、世代が変わったらもう無い
 				}
