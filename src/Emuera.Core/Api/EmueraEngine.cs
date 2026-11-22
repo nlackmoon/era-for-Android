@@ -628,7 +628,7 @@ namespace MinorShift.Emuera.Api
 			if (console == null) return [];
 			return console.DisplayLineList.SelectMany(l => l.Buttons)
 				.Where(b => b.IsButton && !b.IsErrorButton && b.Generation == console.LastButtonGeneration)
-				.Select(b => (object)new { text = b.ToString(), value = b.IsInteger ? b.Input.ToString(System.Globalization.CultureInfo.InvariantCulture) : b.Inputs }).ToArray();
+				.Select(b => (object)new { text = CleanDumpLine(b.ToString()), value = b.IsInteger ? b.Input.ToString(System.Globalization.CultureInfo.InvariantCulture) : b.Inputs }).ToArray();
 		}
 		public int SelectableButtonCount()
 		{

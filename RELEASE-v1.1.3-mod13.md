@@ -43,6 +43,12 @@
 `<div xpos='1600px' ...>`、`<shape type='space' param='841px'>` 一起显示。
 现在只保留看得见的文字。
 
+## 4. 选项卡片上的文字也清理了
+
+画蛇添足版的选项是用 `HTML_PRINT` 的 `<shape type='space'>` 排版的，选项面板以前
+会把标签一起显示成 `[0]<shape type='space'...`。现在只显示
+`[0] START` / `[1] 扮演模式（一部分口上无法显示）`。
+
 ## 验证
 
 用桌面版探针直接跑同一份 eraTW 目录（8200 个脚本 / 338 MB）：
@@ -60,7 +66,7 @@ choices: [0] 开始游戏 / [1] 继续游戏 / [2] DEMO   (警告 0 条)
 - 版本：`1.1.3-mod13`（versionCode 15）
 - 最低 Android 8.0（API 26），arm64-v8a / x86_64
 - 大小：56 528 331 字节（53.9 MiB）
-- SHA-256：`b0413fd30c842b8484b30ad279a36a56baaf414c69fd4cb94421487f632142d5`
+- SHA-256：`03d2fbc1cc2400c70b6fc3a3e17bbeefec2b76c78d782b0ec752adca7ea521ff`
 
 **签名说明**：与 mod1～mod12 同一张自签证书，可直接覆盖升级，游戏库和存档保留；
 不能覆盖上游官方版。
