@@ -11,6 +11,7 @@ using MinorShift.Emuera.Runtime.Utils.EvilMask;
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace MinorShift.Emuera.Api
@@ -121,10 +122,20 @@ namespace MinorShift.Emuera.Api
 			// 文字の大きさは行の高さも巻き込むので、はみ出さないよう下限だけ合わせる。
 			if (FontSizeOverride >= 8)
 			{
+				// 行の高さも同じ比率で伸び縮みさせる。ここを据え置くと、文字だけ小さくなって
+				// 1 画面に入る行数が増えず「小さいうえに間延びした」画面になる
+				// (eraTW は FONT SIZE:18 / LINE HEIGHT:18 なので、10 にしても 18 のままだった)。
+				int gameFont = ConfigData.Instance.GetConfigValue<int>(ConfigCode.FontSize);
+				int gameLine = ConfigData.Instance.GetConfigValue<int>(ConfigCode.LineHeight);
 				ConfigData.Instance.GetConfigItem(ConfigCode.FontSize).SetValue(FontSizeOverride);
-				int lineHeight = ConfigData.Instance.GetConfigValue<int>(ConfigCode.LineHeight);
-				if (lineHeight < FontSizeOverride + 2)
-					ConfigData.Instance.GetConfigItem(ConfigCode.LineHeight).SetValue(FontSizeOverride + 4);
+				if (gameFont > 0 && gameLine > 0)
+				{
+					int scaled = (int)Math.Round(gameLine * (double)FontSizeOverride / gameFont);
+					// 文字が上下で切れない最低限だけ確保する
+					if (scaled < FontSizeOverride)
+						scaled = FontSizeOverride;
+					ConfigData.Instance.GetConfigItem(ConfigCode.LineHeight).SetValue(scaled);
+				}
 			}
 			Config.SetConfig(ConfigData.Instance);
 			JSONConfig.Load();
@@ -460,6 +471,36 @@ namespace MinorShift.Emuera.Api
 		/// </summary>
 		public (int Value, int Max) ScrollState
 			=> window == null ? (0, 0) : (window.ScrollBar.Value, window.ScrollBar.Maximum);
+
+		/// <summary>
+		/// 直近のログを素のテキストで取り出す。画面側の「全文」パネルが
+		/// HTML で組み直して、状態欄のように 1 画面へ入りきらない文章を読むのに使う。
+		/// 描画済みの表示行をそのまま辿るので、折り返しもゲームの見た目どおりになる。
+		/// </summary>
+		public string[] DumpLines(int max)
+		{
+			if (console == null || max <= 0)
+				return [];
+			var lines = console.DisplayLineList;
+			if (lines == null || lines.Count == 0)
+				return [];
+
+			int from = Math.Max(0, lines.Count - max);
+			var result = new string[lines.Count - from];
+			var builder = new StringBuilder(256);
+			for (int i = from; i < lines.Count; i++)
+			{
+				builder.Clear();
+				var buttons = lines[i].Buttons;
+				if (buttons != null)
+				{
+					foreach (var button in buttons)
+						button?.BuildString(builder);
+				}
+				result[i - from] = builder.ToString();
+			}
+			return result;
+		}
 
 		/// <summary>
 		/// バックログを行単位で送る。正の値で過去へ、負の値で最新へ向かう。

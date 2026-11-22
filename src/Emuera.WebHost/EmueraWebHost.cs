@@ -646,6 +646,9 @@ namespace MinorShift.Emuera.WebHost
 				EmueraTapResult? tapResult = null;
 				int tapId = GetInt(root, "id");
 
+				// 「全文」パネル用のログ抽出結果。要求されたときだけ詰める
+				string[]? dumpLines = null;
+
 				// スクリプトを走らせうる操作は、gate を取る前に「処理中」を伝える。
 				// 実行中は受信スレッドごと止まるので、ここを逃すと言う機会が無い
 				if (type is "click" or "submit" or "enter" or "skip" or "skipall")
@@ -756,6 +759,18 @@ namespace MinorShift.Emuera.WebHost
 							DisplayOptions.ShowImages = GetBool(root, "v");
 							engine.MarkDirty();
 							break;
+
+						// 直近のログを素のテキストで返す。「全文」パネルが HTML で組み直すので、
+						// 状態欄のように 1 画面へ入りきらない文章もスクロールして読める
+						case "dump":
+							{
+								int count = GetInt(root, "n");
+								if (count <= 0 || count > 2000)
+									count = 600;
+								dumpLines = engine.DumpLines(count);
+								changed = false;   // 画面は変わらないので再描画させない
+							}
+							break;
 					}
 
 					RecordInput(type, work.Elapsed.TotalMilliseconds,
@@ -764,6 +779,9 @@ namespace MinorShift.Emuera.WebHost
 
 				if (metricsChanged)
 					SendMetrics();
+
+				if (dumpLines != null)
+					Send(new { t = "lines", lines = dumpLines });
 
 				if (tapResult != null)
 					Send(new { t = "tap", id = tapId, v = tapResult.Value.ToString().ToLowerInvariant() });
