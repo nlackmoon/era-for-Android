@@ -2659,15 +2659,25 @@ internal sealed partial class EmueraConsole : IDisposable
 		int move = max - window.ScrollBar.Maximum;
 		if (move == 0)
 			return;
+		// NF (NoFocus) 待ちの間は、履歴を読んでいる人の位置を奪わない。
+		// 動く地図は待機中も毎フレーム CLEARLINE → 再描画するので、素直に
+		// 「増えたぶんだけ下へ」やると、上へ遡れなくなる。
+		// 待ちが明けた直後の 1 フレームも同じループの続きなので、state では判定しない
+		// (inputReq は次の WaitInput まで残る)。
+		bool keepScroll = inputReq != null && inputReq.NoFocus
+			&& window.ScrollBar.Value < window.ScrollBar.Maximum;
 		window.TextBoxIgnoreScrollBarChanges = true;
 		if (move > 0)
 		{
 			window.ScrollBar.Maximum = max;
-			window.ScrollBar.Value += move;
+			if (!keepScroll)
+				window.ScrollBar.Value += move;
 		}
 		else
 		{
-			if (max > window.ScrollBar.Value)
+			if (!keepScroll && max > window.ScrollBar.Value)
+				window.ScrollBar.Value = max;
+			else if (window.ScrollBar.Value > max)
 				window.ScrollBar.Value = max;
 			window.ScrollBar.Maximum = max;
 		}

@@ -1,35 +1,77 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>era for Android</title>
 <style>
-:root{--ink:#e8f0e0;--muted:#a9b79e;--accent:#c8eead;--panel:rgba(12,16,10,.9);--line:rgba(255,255,255,.09)}
+:root{--ink:#e8f0e0;--muted:#a9b79e;--accent:#c8eead;--panel:rgba(12,16,10,.92);--line:rgba(255,255,255,.09)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0;background:#000;color:var(--ink);font-family:system-ui,-apple-system,'Noto Sans SC',sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
 button,input{font:inherit}button{border:0;color:inherit;cursor:pointer;background:none}
-svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #stage{position:fixed;inset:0;overflow:hidden;background:#000;touch-action:none}
-#screen{position:absolute;left:0;bottom:0;width:100%;height:100%;object-fit:fill;transform-origin:center center;pointer-events:none;will-change:transform;-webkit-user-drag:none}
-#float{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));display:flex;gap:8px;z-index:6;transition:opacity .35s}
-#float.dim{opacity:.26}
-.ico{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;padding:0;color:var(--ink);background:rgba(14,18,12,.55);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .12s,background .16s}
-.ico:active{transform:scale(.92);background:rgba(40,52,33,.8)}
-.ico.skip{background:rgba(200,238,173,.88);color:#1b2416;border-color:transparent}
-.ico.fnt{font-size:13px;font-weight:700;letter-spacing:-.5px}
-#status{position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(8px + env(safe-area-inset-top));z-index:5;display:flex;align-items:center;gap:7px;font-size:11px;line-height:1;padding:8px 11px;border-radius:20px;background:rgba(12,16,10,.5);border:1px solid var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:.9;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#screen{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:fill;transform-origin:center center;pointer-events:none;will-change:transform;-webkit-user-drag:none}
+/* ── 顶栏 ───────────────────────────────────────────── */
+#bar{position:absolute;left:0;right:0;top:0;z-index:6;display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px calc(8px + env(safe-area-inset-left));pointer-events:none;transition:opacity .35s}
+#bar.dim{opacity:.22}
+#bar>*{pointer-events:auto}
+#bar .sp{flex:1;pointer-events:none}
+.tb{height:34px;min-width:34px;padding:0 9px;border-radius:11px;display:grid;place-items:center;color:var(--ink);background:rgba(12,16,10,.52);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:12px;font-weight:600;transition:transform .1s,background .16s}
+.tb:active{transform:scale(.94);background:rgba(40,52,33,.8)}
+.tb.on{background:rgba(200,238,173,.86);color:#1b2416;border-color:transparent}
+#status{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px;border-radius:11px;font-size:11px;background:rgba(12,16,10,.45);border:1px solid var(--line);max-width:30vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#cfdcc4}
 #status i{width:6px;height:6px;border-radius:50%;background:#a8d98a;flex:none}
 #status.bad i{background:#ff9d94}
 #status.busy i{background:#e8d38a;animation:pulse 1s infinite}
-#status.idle{opacity:.3;transition:opacity .4s}
+#status.idle{opacity:.34}
 @keyframes pulse{50%{opacity:.3}}
-#latest{position:absolute;left:calc(12px + env(safe-area-inset-left));bottom:calc(12px + env(safe-area-inset-bottom));z-index:4;border-radius:22px;padding:9px 15px;font-size:12px;border:1px solid rgba(200,238,173,.45);background:rgba(20,26,16,.82);color:var(--accent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#fgroup{display:flex;align-items:center;gap:2px;background:rgba(12,16,10,.52);border:1px solid rgba(255,255,255,.15);border-radius:11px;height:34px;padding:2px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#fgroup .tb{height:28px;min-width:28px;border:0;background:none;border-radius:8px;font-size:12px}
+#fgroup .tb:active{background:rgba(255,255,255,.14)}
+#fsize{min-width:24px;text-align:center;font-size:11px;color:var(--accent);font-variant-numeric:tabular-nums}
+#latest{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));z-index:4;border-radius:22px;padding:9px 15px;font-size:12px;border:1px solid rgba(200,238,173,.45);background:rgba(20,26,16,.82);color:var(--accent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 #latest[hidden]{display:none}
+/* ── 左侧栏 ─────────────────────────────────────────── */
+#scrim{position:fixed;inset:0;z-index:16;background:rgba(0,0,0,.42);opacity:0;transition:opacity .22s}
+#scrim.on{opacity:1}
+#scrim[hidden]{display:none}
+#drawer{position:fixed;left:0;top:0;bottom:0;z-index:17;width:min(76vw,310px);background:#11160e;border-right:1px solid rgba(255,255,255,.1);transform:translateX(-102%);transition:transform .24s cubic-bezier(.2,.7,.3,1);display:flex;flex-direction:column;padding-top:calc(12px + env(safe-area-inset-top))}
+#drawer.on{transform:none}
+#drawer header{padding:4px 18px 12px;font-size:12px;color:#8fa183;letter-spacing:.04em;border-bottom:1px solid rgba(255,255,255,.07)}
+#drawer header b{display:block;font-size:15px;color:#e4efd9;letter-spacing:0;margin-bottom:3px}
+#drawer .items{flex:1;overflow-y:auto;padding:4px 0}
+#drawer .items button{display:flex;align-items:center;gap:10px;width:100%;height:48px;padding:0 18px;font-size:14px;color:#dbe7d0;text-align:left;border-bottom:1px solid rgba(255,255,255,.055)}
+#drawer .items button:active{background:rgba(255,255,255,.07)}
+#drawer .items button .k{flex:1}
+#drawer .items button small{font-size:10px;color:#7f8f74}
+#drawer footer{padding:10px 18px calc(14px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#c9d6bd}
+/* ── 开关 ───────────────────────────────────────────── */
+.sw{width:46px;height:26px;border-radius:14px;background:#39452f;position:relative;flex:none;transition:background .18s}
+.sw:after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#a8b49c;transition:.18s}
+.sw[aria-checked=true]{background:#4f7a3b}
+.sw[aria-checked=true]:after{left:23px;background:#dff5cd}
+/* ── 选项 ───────────────────────────────────────────── */
+#choices{position:fixed;right:calc(8px + env(safe-area-inset-right));top:calc(56px + env(safe-area-inset-top));max-height:calc(100% - 72px - env(safe-area-inset-bottom));width:var(--cw,236px);z-index:8;display:grid;grid-template-columns:repeat(var(--cols,1),minmax(0,1fr));align-content:start;gap:calc(6px * var(--cs,1));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:2px;scrollbar-width:none}
+#choices[hidden]{display:none}
+#choices button{position:relative;min-width:0;width:100%;text-align:left;padding:calc(9px * var(--cs,1)) calc(11px * var(--cs,1)) calc(9px * var(--cs,1)) calc(15px * var(--cs,1));border-radius:calc(10px * var(--cs,1));background:var(--cbg,rgba(8,10,7,.34));border:1px solid var(--cbd,rgba(255,255,255,.2));color:#f3f7ee;font-size:calc(13px * var(--cs,1));line-height:1.35;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:block;overflow:hidden;transition:transform .1s,box-shadow .12s}
+#choices button:before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:3px;border-radius:0 3px 3px 0;background:var(--cbar,transparent)}
+#choices button:active{transform:scale(.985);background:var(--csel,rgba(80,100,65,.55))}
+#choices button.sel{box-shadow:inset 0 0 0 1.5px var(--cbar,#c8eead),0 4px 16px rgba(0,0,0,.45);background:var(--csel,rgba(200,238,173,.2))}
+#choices .ctext{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;word-break:break-word}
+#choices .hint{grid-column:1/-1;font-size:10px;color:#9fb094;text-align:center;padding:2px 0 0}
+/* ── 全文 ───────────────────────────────────────────── */
 #full{position:fixed;inset:0;z-index:14;display:flex;flex-direction:column;background:#0a0e08}
 #full[hidden]{display:none}
-#full header{display:flex;align-items:center;gap:8px;padding:calc(9px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 9px calc(12px + env(safe-area-inset-left));border-bottom:1px solid rgba(255,255,255,.1);font-size:13px;color:#c9d7bf;flex:none}
-#full header .sp{flex:1}
+#full header,#logpanel header{display:flex;align-items:center;gap:8px;padding:calc(9px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 9px calc(12px + env(safe-area-inset-left));border-bottom:1px solid rgba(255,255,255,.1);font-size:13px;color:#c9d7bf;flex:none}
+#full header .sp,#logpanel header .sp{flex:1}
 #full header .hint{font-size:11px;color:#7f8f76}
-#full header button{height:32px;padding:0 11px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:12px;color:#dfe8d6}
+#full header button,#logpanel header button{height:32px;padding:0 11px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:12px;color:#dfe8d6}
 #full header button.fs{min-width:42px;font-weight:700;font-size:13px}
-#fullbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:8px calc(14px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left))}
-#fulltext{margin:0;font-family:ui-monospace,SFMono-Regular,'Noto Sans Mono CJK SC',monospace;white-space:pre-wrap;word-break:break-word;line-height:1.45;color:#dfe8d6;font-size:15px}
+#fullbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:8px calc(14px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));contain:content}
+#fulltext{margin:0;font-family:ui-monospace,SFMono-Regular,'Noto Sans Mono CJK SC',monospace;white-space:pre-wrap;word-break:break-word;line-height:1.42;color:#dfe8d6;font-size:15px;will-change:scroll-position}
+/* ── 日志 / 调试 ────────────────────────────────────── */
+#logpanel{position:fixed;inset:0;z-index:15;display:flex;flex-direction:column;background:#0a0e08}
+#logpanel[hidden]{display:none}
+#logbody{flex:1;min-height:0;overflow:auto;padding:10px 14px calc(14px + env(safe-area-inset-bottom));font-family:ui-monospace,monospace;font-size:12px;line-height:1.45;color:#cfdcc4;white-space:pre-wrap;word-break:break-all;overscroll-behavior:contain;touch-action:pan-y}
+#debug{position:fixed;left:calc(8px + env(safe-area-inset-left));bottom:calc(8px + env(safe-area-inset-bottom));z-index:5;font-family:ui-monospace,monospace;font-size:10px;line-height:1.35;color:#b9c9ad;background:rgba(0,0,0,.55);padding:5px 7px;border-radius:7px;white-space:pre;pointer-events:none}
+#debug[hidden]{display:none}
+/* ── 数字键盘 ───────────────────────────────────────── */
 #pad{position:absolute;right:calc(8px + env(safe-area-inset-right));bottom:calc(8px + env(safe-area-inset-bottom));width:min(192px,46vw);z-index:7;display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:16px;background:rgba(8,10,7,var(--pad-a,.28));border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 #pad.off{display:none}
 .inrow{display:flex;gap:6px}
@@ -38,24 +80,21 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 #send{height:34px;padding:0 10px;border-radius:9px;background:rgba(200,238,173,.86);color:#1b2416;font-weight:650;font-size:12px;flex:none}
 #send:disabled{opacity:.4}
 .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
-.keys button{height:38px;border-radius:10px;background:rgba(25,32,21,var(--pad-k,.38));border:1px solid rgba(255,255,255,.16);font-size:16px;color:var(--ink);transition:transform .1s,background .16s;backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px)}
+.keys button{height:38px;border-radius:10px;background:rgba(25,32,21,var(--pad-k,.38));border:1px solid rgba(255,255,255,.16);font-size:16px;color:var(--ink);transition:transform .1s,background .16s}
 .keys button:active{transform:scale(.94);background:rgba(80,100,65,.6)}
 .keys button.util{font-size:12px;color:#c4d3b8}
-#choices{position:fixed;right:calc(8px + env(safe-area-inset-right));top:calc(58px + env(safe-area-inset-top));max-height:calc(100% - 74px - env(safe-area-inset-bottom));width:var(--cw,236px);z-index:8;display:grid;grid-template-columns:repeat(var(--cols,1),minmax(0,1fr));align-content:start;gap:calc(6px * var(--cs,1));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:2px;scrollbar-width:none}
-#choices[hidden]{display:none}
-#choices button{min-width:0;width:100%;text-align:left;padding:calc(9px * var(--cs,1)) calc(11px * var(--cs,1));border-radius:calc(11px * var(--cs,1));background:rgba(8,10,7,.30);border:1px solid rgba(255,255,255,.18);color:var(--ink);font-size:calc(13px * var(--cs,1));line-height:1.35;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:block;overflow:hidden}
-#choices .ctext{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;word-break:break-word}
-#choices button:active{background:rgba(80,100,65,.55)}
-/* 虚拟手柄：左下に D パッド + A/B。数字キーパッド (右下) と重ならない位置に置く */
-#gp{position:absolute;left:calc(10px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));z-index:7;display:flex;align-items:flex-end;gap:10px;transition:opacity .3s}
+/* ── 手柄 ───────────────────────────────────────────── */
+#gp{position:absolute;left:calc(10px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));z-index:7;display:flex;align-items:flex-end;gap:10px}
 #gp[hidden]{display:none}
-#gp .dpad{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,46px);gap:5px}
-#gp .dpad button{width:46px;height:46px;border-radius:13px;background:rgba(8,10,7,.34);border:1px solid rgba(255,255,255,.2);color:var(--ink);font-size:14px;line-height:1;display:grid;place-items:center;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-#gp .acts{display:flex;flex-direction:column;gap:7px}
-#gp .acts button{width:54px;height:54px;border-radius:50%;font-size:15px;font-weight:700;background:rgba(8,10,7,.4);border:1px solid rgba(255,255,255,.22);color:var(--ink);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-#gp .acts .a{background:rgba(200,238,173,.82);color:#1b2416;border-color:transparent}
+#gp .wrap{display:flex;flex-direction:column;gap:5px}
+#gp .tip{font-size:9px;color:#9cae8f;background:rgba(8,10,7,.5);border-radius:8px;padding:3px 7px;text-align:center;white-space:nowrap}
+#gp .dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:4px}
+#gp .dpad button{width:44px;height:44px;border-radius:12px;background:rgba(8,10,7,.36);border:1px solid rgba(255,255,255,.2);color:var(--ink);font-size:13px;display:grid;place-items:center}
+#gp .acts{display:flex;flex-direction:column;gap:6px;justify-content:flex-end}
+#gp .acts button{width:52px;height:52px;border-radius:50%;font-size:14px;font-weight:700;background:rgba(8,10,7,.42);border:1px solid rgba(255,255,255,.22);color:var(--ink)}
+#gp .acts .a{background:rgba(200,238,173,.84);color:#1b2416;border-color:transparent}
 #gp button:active{background:rgba(80,100,65,.62);transform:scale(.95)}
-#gp .acts .a:active{background:rgba(220,250,195,.95)}
+/* ── 设置面板 ───────────────────────────────────────── */
 .seg{display:flex;border:1px solid rgba(255,255,255,.16);border-radius:9px;overflow:hidden;flex:none}
 .seg button{padding:6px 12px;font-size:12px;background:rgba(0,0,0,.25);color:var(--muted)}
 .seg button.on{background:rgba(200,238,173,.85);color:#1b2416;font-weight:650}
@@ -69,50 +108,50 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:5px 0;font-size:14px}
 @media(min-width:700px){.rows{grid-template-columns:1fr 1fr}}
 .row output{font-size:12px;color:var(--muted);min-width:38px;text-align:right}
-.sw{width:46px;height:26px;border-radius:14px;background:#39452f;position:relative;flex:none;transition:background .18s}
-.sw:after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#a8b49c;transition:.18s}
-.sw[aria-checked=true]{background:#4f7a3b}
-.sw[aria-checked=true]:after{left:23px;background:#dff5cd}
 input[type=range]{flex:1;min-width:0;accent-color:#8fc56c;margin:0}
 .btnrow{display:flex;gap:8px;margin-top:6px}.btnrow .wide{margin-top:0;flex:1}
 .wide{width:100%;margin-top:6px;height:34px;border-radius:12px;background:#222b1b;border:1px solid rgba(255,255,255,.1);color:#dbe8d2;font-size:14px}
 .wide.primary{background:var(--accent);color:#1b2416;font-weight:650;border:0}
-#toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translate(-50%,10px);background:rgba(24,30,20,.95);border:1px solid rgba(255,255,255,.1);color:var(--ink);padding:10px 16px;border-radius:14px;font-size:13px;line-height:1.5;max-width:78vw;opacity:0;pointer-events:none;transition:.2s;z-index:11;text-align:center}
+#toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translate(-50%,10px);background:rgba(24,30,20,.96);border:1px solid rgba(255,255,255,.1);color:var(--ink);padding:10px 16px;border-radius:14px;font-size:13px;line-height:1.5;max-width:78vw;opacity:0;pointer-events:none;transition:.2s;z-index:20;text-align:center}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 @media(max-height:430px){.card p{display:none}.card h3{margin-bottom:6px}}
 @media(min-width:700px){#sheet{align-items:center}.card{border-radius:18px}}
-@media(max-height:340px){.ico{width:36px;height:36px}#status{font-size:10px;padding:6px 9px}}
+@media(max-height:340px){.tb{height:31px;min-width:31px}#status{font-size:10px}}
+@media(max-width:720px){#status{display:none}#bar{gap:4px}}
 </style></head><body>
-<svg style="display:none"><symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol><symbol id="i-keys" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 9h.1M11 9h.1M15 9h.1M7 13h.1M11 13h.1M15 13h.1M7 17h10"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h7m4 0h5M4 17h3m4 0h9"/><circle cx="13" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol><symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/></symbol><symbol id="i-del" viewBox="0 0 24 24"><path d="M3 12l5-7h13v14H8zM12 9l6 6m0-6-6 6"/></symbol><symbol id="i-pad" viewBox="0 0 24 24"><path d="M7 8h10a4 4 0 0 1 3.9 4.9l-.7 3.4A2.6 2.6 0 0 1 15.9 17l-1.6-1.7h-4.6L8.1 17a2.6 2.6 0 0 1-4.3-1.7l-.7-3.4A4 4 0 0 1 7 8z"/><path d="M8 11v3M6.5 12.5h3M15.5 11.6h.1M17.4 13.4h.1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 7.5-1.9"/><symbol id="i-log" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></symbol></svg>
+<svg style="display:none"><symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol><symbol id="i-keys" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 9h.1M11 9h.1M15 9h.1M7 13h.1M11 13h.1M15 13h.1M7 17h10"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/></symbol><symbol id="i-del" viewBox="0 0 24 24"><path d="M3 12l5-7h13v14H8zM12 9l6 6m0-6-6 6"/></symbol><symbol id="i-pad" viewBox="0 0 24 24"><path d="M7 8h10a4 4 0 0 1 3.9 4.9l-.7 3.4A2.6 2.6 0 0 1 15.9 17l-1.6-1.7h-4.6L8.1 17a2.6 2.6 0 0 1-4.3-1.7l-.7-3.4A4 4 0 0 1 7 8z"/><path d="M8 11v3M6.5 12.5h3M15.5 11.6h.1M17.4 13.4h.1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 7.5-1.9"/></symbol><symbol id="i-log" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></symbol></svg>
 <div id="stage">
  <img id="screen" alt="游戏画面" draggable="false">
- <div id="status"><i></i><span id="statustext">连接中</span></div>
- <div id="float">
-  <button class="ico skip" id="skip" aria-label="跳过对话"><svg><use href="#i-skip"/></svg></button>
-  <button class="ico" id="gpbtn" aria-label="虚拟手柄"><svg><use href="#i-pad"/></svg></button>
-  <button class="ico" id="orient" aria-label="转向锁"><svg><use href="#i-unlock"/></svg></button>
-  <button class="ico" id="fullbtn" aria-label="查看全文"><svg><use href="#i-log"/></svg></button>
-  <button class="ico fnt" id="fontminus" aria-label="字号减小">A−</button>
-  <button class="ico fnt" id="fontplus" aria-label="字号增大">A+</button>
-  <button class="ico" id="keys" aria-label="数字键盘"><svg><use href="#i-keys"/></svg></button>
-  <button class="ico" id="menu" aria-label="设置"><svg><use href="#i-menu"/></svg></button>
-  <button class="ico" id="back" aria-label="返回游戏库"><svg><use href="#i-back"/></svg></button>
+ <div id="bar">
+  <button class="tb" id="menu" aria-label="菜单"><svg><use href="#i-menu"/></svg></button>
+  <div id="status"><i></i><span id="statustext">连接中</span></div>
+  <span class="sp"></span>
+  <div id="fgroup" aria-label="字号">
+   <button class="tb" id="fontminus" aria-label="字号减小">A−</button><span id="fsize">18</span><button class="tb" id="fontplus" aria-label="字号增大">A+</button>
+  </div>
+  <button class="tb" id="fullbtn" aria-label="查看全文"><svg><use href="#i-log"/></svg></button>
+  <button class="tb" id="gpbtn" aria-label="虚拟手柄"><svg><use href="#i-pad"/></svg></button>
+  <button class="tb" id="keys" aria-label="数字键盘"><svg><use href="#i-keys"/></svg></button>
+  <button class="tb" id="orient" aria-label="转向锁"><svg><use href="#i-unlock"/></svg></button>
+  <button class="tb" id="back" aria-label="返回游戏库"><svg><use href="#i-back"/></svg></button>
  </div>
  <button id="latest" hidden>回到最新 ↓</button>
  <aside id="gp" hidden aria-label="虚拟手柄">
-  <div class="dpad">
-   <button data-gp="up" aria-label="上一行" style="grid-column:2;grid-row:1">▲</button>
-   <button data-gp="left" aria-label="上一页" style="grid-column:1;grid-row:2">◀</button>
-   <button data-gp="latest" aria-label="回到最新" style="grid-column:2;grid-row:2">●</button>
-   <button data-gp="right" aria-label="下一页" style="grid-column:3;grid-row:2">▶</button>
-   <button data-gp="down" aria-label="下一行" style="grid-column:2;grid-row:3">▼</button>
+  <div class="wrap"><div class="tip">▲▼ 选择 · A 确认 · B 返回</div>
+   <div class="dpad">
+    <button data-gp="up" aria-label="上一个选项" style="grid-column:2;grid-row:1">▲</button>
+    <button data-gp="left" aria-label="回到最新" style="grid-column:1;grid-row:2">◀</button>
+    <button data-gp="latest" aria-label="回到最新" style="grid-column:2;grid-row:2">●</button>
+    <button data-gp="right" aria-label="跳到最新" style="grid-column:3;grid-row:2">▶</button>
+    <button data-gp="down" aria-label="下一个选项" style="grid-column:2;grid-row:3">▼</button>
+   </div>
   </div>
   <div class="acts">
    <button class="a" data-gp="a" aria-label="确认">A</button>
-   <button data-gp="b" aria-label="取消">B</button>
+   <button data-gp="b" aria-label="返回">B</button>
   </div>
  </aside>
- <aside id="pad" aria-label="数字键盘">
+ <aside id="pad" class="off" aria-label="数字键盘">
   <div class="inrow"><input id="text" type="text" inputmode="none" autocomplete="off" placeholder="输入数字" maxlength="2000"><button id="send" disabled><span id="sendlabel">确认</span></button></div>
   <div class="keys">
    <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
@@ -121,8 +160,24 @@ input[type=range]{flex:1;min-width:0;accent-color:#8fc56c;margin:0}
    <button class="util" id="kb" aria-label="文字键盘">文</button><button data-key="0">0</button><button class="util" id="del" aria-label="退格"><svg><use href="#i-del"/></svg></button>
   </div>
  </aside>
+ <div id="debug" hidden></div>
 </div>
 <aside id="choices" hidden aria-label="游戏选项"></aside>
+<div id="scrim" hidden></div>
+<aside id="drawer" aria-label="菜单">
+ <header><b>era for Android</b><span id="dwgame">游戏菜单</span></header>
+ <div class="items">
+  <button data-dw="reload"><span class="k">重新加载</span><small>重新连接画面</small></button>
+  <button data-dw="title"><span class="k">返回标题界面</span><small>不保存</small></button>
+  <button data-dw="settings"><span class="k">设置</span></button>
+  <button data-dw="lang"><span class="k">语言</span><small>跟随游戏</small></button>
+  <button data-dw="log"><span class="k">查看日志</span></button>
+  <button data-dw="savelog"><span class="k">保存日志</span></button>
+  <button data-dw="debug"><span class="k">调试</span><small id="dbgstate">关</small></button>
+  <button data-dw="skip"><span class="k">跳过对话</span><small>一键跳过</small></button>
+ </div>
+ <footer><span>数字输入</span><button class="sw" id="sw-pad2" role="switch" aria-checked="false" aria-label="数字输入"></button></footer>
+</aside>
 <aside id="full" hidden aria-label="全文">
  <header>
   <span>游戏文本</span><span class="hint" id="fullcount"></span><span class="sp"></span>
@@ -133,26 +188,31 @@ input[type=range]{flex:1;min-width:0;accent-color:#8fc56c;margin:0}
  </header>
  <div id="fullbody"><pre id="fulltext"></pre></div>
 </aside>
- <div id="sheet" hidden>
-  <div class="card">
-   <h3>显示设置</h3>
-   <p>字号越小，一屏能显示的行数越多——状态栏装不下时先按 A−。屏幕大小只改变画面缩放，不改行数。按钮几秒后会自动变淡。</p>
- <div class="rows">
+<aside id="logpanel" hidden aria-label="日志">
+ <header><span>emuera.log</span><span class="sp"></span><button id="logrefresh">刷新</button><button id="logsave">保存</button><button id="logclose">关闭</button></header>
+ <div id="logbody"></div>
+</aside>
+<div id="sheet" hidden>
+ <div class="card">
+  <h3>显示设置</h3>
+  <p>字号越小，一屏能显示的行数越多——状态栏装不下时先按 A−。字号在下次进入游戏时生效（和官方模拟器一样）。</p>
+  <div class="rows">
+   <div class="row"><span>字号</span><div class="seg"><button id="fs-minus">A−</button><output id="fs-val" style="min-width:34px">18</output><button id="fs-plus">A+</button></div></div>
    <div class="row"><span>屏幕大小</span><input id="zoom" type="range" min="70" max="130" step="5" value="100"><output id="zoomval">100%</output></div>
    <div class="row"><span>缩放方式</span><div class="seg"><button id="fit-fill" class="on">铺满</button><button id="fit-contain">等比</button></div></div>
    <div class="row"><span>显示游戏图片</span><button class="sw" id="sw-images" role="switch" aria-checked="true" aria-label="显示游戏图片"></button></div>
    <div class="row"><span>按键振动</span><button class="sw" id="sw-haptic" role="switch" aria-checked="true" aria-label="按键振动"></button></div>
-   <div class="row"><span>常驻数字键盘</span><button class="sw" id="sw-pad" role="switch" aria-checked="true" aria-label="常驻数字键盘"></button></div>
+   <div class="row"><span>数字输入（常驻键盘）</span><button class="sw" id="sw-pad" role="switch" aria-checked="false" aria-label="数字输入"></button></div>
    <div class="row"><span>显示选项面板</span><button class="sw" id="sw-choices" role="switch" aria-checked="true" aria-label="显示选项面板"></button></div>
    <div class="row"><span>键盘透明度</span><input id="padalpha" type="range" min="15" max="70" step="5" value="35"><output id="padalphaval">35%</output></div>
    <div class="row"><span>选项列数</span><div class="seg" id="choicecols"><button data-cols="1">1</button><button data-cols="2" class="on">2</button><button data-cols="3">3</button></div></div>
    <div class="row"><span>选项块大小</span><input id="choicescale" type="range" min="70" max="130" step="5" value="100"><output id="choicescaleval">100%</output></div>
- </div>
-   <div class="btnrow"><button class="wide" id="reset">恢复默认显示</button><button class="wide" id="savehelp">存档与进度</button></div>
-   <button class="wide primary" id="done">完成</button>
   </div>
+  <div class="btnrow"><button class="wide" id="reset">恢复默认显示</button><button class="wide" id="savehelp">存档与进度</button></div>
+  <button class="wide primary" id="done">完成</button>
  </div>
- <div id="toast" role="status"></div>
+</div>
+<div id="toast" role="status"></div>
 
 <script>
 'use strict';
@@ -161,9 +221,11 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const stage=$('stage'),screen=$('screen'),text=$('text'),pad=$('pad'),sheet=$('sheet');
 const token=new URLSearchParams(location.search).get('token');
 let ws=null,mode='loading',single=false,inflight=false,ready=false,manualKb=false;
-let setting={scale:1,images:true,haptic:true,pad:true,padAlpha:.35,fit:'fill',choiceScale:1,choiceCols:2,showChoices:true,gamepad:false,lock:false,fontSize:0};let choicesVisible=false,padSuppressed=false,lastChoices=[];
-let engineW=1000,engineH=420,lineHeight=20,engineFont=18,pan=0,zoom=1,scrollPos=0,scrollMax=0;
-let frameURL=null,toastTimer=0,retryTimer=0,resizeTimer=0,dimTimer=0,retries=0;
+let setting={scale:1,images:true,haptic:true,pad:false,padAlpha:.35,fit:'fill',choiceScale:1,choiceCols:2,showChoices:true,gamepad:false,lock:false,fontSize:0,bar:true,padv:2};
+let choicesVisible=false,padSuppressed=false,lastChoices=[],selIndex=-1,choiceSig='';
+let engineW=1000,engineH=420,lineHeight=20,engineFont=18,pan=0,zoom=1,scrollPos=0,scrollMax=0,visualPx=0;
+let frameURL=null,toastTimer=0,retryTimer=0,resizeTimer=0,dimTimer=0,retries=0,debugTimer=0;
+let warnedPad=false;
 
 function native(action,value){try{window.Android&&window.Android.call(JSON.stringify({action,value}));}catch(e){}}
 function haptic(){if(setting.haptic)native('haptic');}
@@ -176,16 +238,23 @@ function setStatus(s,bad,busy){
  if(!bad&&!busy)statusTimer=setTimeout(()=>el.classList.add('idle'),4000);
 }
 
+/* ── 显示 / 缩放 ───────────────────────────────────── */
 function syncFit(){
  const contain=setting.fit==='contain';
  $('fit-fill').classList.toggle('on',!contain);
  $('fit-contain').classList.toggle('on',contain);
 }
+function applyTransform(){
+ // 拖动中先把既有画面按手指方向平移，等新帧到了再归零。
+ // 这样服务器还在烧下一张 PNG 的时候，画面已经跟着手指走了
+ const y=Math.round(visualPx*100)/100;
+ screen.style.transform=setting.fit==='contain'?'none':`translate(${pan}px,${y}px) scale(${zoom})`;
+}
 function applySettings(){
  setting.scale=Math.max(.7,Math.min(1.3,Number(setting.scale)||1));
  zoom=setting.scale;pan=0;layout();
  $('zoom').value=Math.round(zoom*100);$('zoomval').value=Math.round(zoom*100)+'%';
-  syncFit();
+ syncFit();
  $('sw-images').setAttribute('aria-checked',String(!!setting.images));
  $('sw-haptic').setAttribute('aria-checked',String(!!setting.haptic));
  setting.padAlpha=Math.max(.12,Math.min(.7,Number(setting.padAlpha)||.35));
@@ -201,16 +270,11 @@ function applySettings(){
 function layout(){
  const contain=setting.fit==='contain';
  screen.style.objectFit=contain?'contain':'fill';
- if(contain){
-  // 等比：エンジン側もゲーム本来の縦横比で描き直すので、ここは黒帯を付けて中央に置くだけ。
-  // (端末の比で描いたままだと黒帯が出ず、切り替えても何も変わらない)
-  screen.style.transform='none';
-  pan=0;
- }else{
-  // 铺满：整图拉伸铺满；zoom 继续用中心缩放。
+ if(contain){pan=0;visualPx=0;screen.style.transform='none';}
+ else{
   const m=Math.max(0,stage.clientWidth*(zoom-1)/2);
   pan=Math.max(-m,Math.min(m,pan));
-  screen.style.transform='translateX('+pan+'px) scale('+zoom+')';
+  applyTransform();
  }
 }
 /** 実際に絵が描かれている矩形。等比のときは左右（または上下）に黒帯が付くので、
@@ -247,6 +311,7 @@ function resize(){
 }
 new ResizeObserver(resize).observe(stage);
 
+/* ── 连接 ─────────────────────────────────────────── */
 const LABELS={loading:'加载中',busy:'运行中',integer:'数字输入',string:'文字输入',any:'等待输入',enter:'点屏幕继续',mouse:'选择选项',void:'等待中',none:'就绪',error:'游戏错误',nomouse:'数字输入'};
 function setMode(v){
  mode=v;ready=['integer','string','any','enter','mouse','nomouse'].includes(v);
@@ -255,6 +320,7 @@ function setMode(v){
  text.inputMode=(v==='string'||manualKb)?'text':'none';
  text.placeholder=v==='string'?'输入文字':v==='enter'?'点屏幕继续':'输入数字';
  $('sendlabel').textContent=v==='enter'?'继续':'确认';
+ if((v==='integer'||v==='nomouse')&&!setting.pad&&!warnedPad){warnedPad=true;toast('要输入数字时点右上角 ⌨');}
  updateSend();
 }
 function updateSend(){$('send').disabled=!ready||inflight||!ws||ws.readyState!==1;}
@@ -270,8 +336,8 @@ function connect(){
   if(e.data instanceof ArrayBuffer){frame(e.data);return;}
   let m;try{m=JSON.parse(e.data)}catch(_){return}
   switch(m.t){
-   case 'title':document.title=m.v+' · era for Android';break;
-   case 'metrics':engineW=Math.max(1,m.w||engineW);engineH=Math.max(1,m.h||engineH);lineHeight=Math.max(1,m.lineHeight||lineHeight);if(m.font)engineFont=Number(m.font)||engineFont;layout();break;
+   case 'title':document.title=m.v+' · era for Android';$('dwgame').textContent=m.v;break;
+   case 'metrics':engineW=Math.max(1,m.w||engineW);engineH=Math.max(1,m.h||engineH);lineHeight=Math.max(1,m.lineHeight||lineHeight);if(m.font)engineFont=Number(m.font)||engineFont;layout();syncFont();break;
    case 'state':single=!!m.single;setMode(m.v);setChoices(m.choices);break;
    case 'input':text.value=m.v||'';break;
    case 'tap':inflight=false;updateSend();break;
@@ -287,15 +353,27 @@ function connect(){
  ws.onerror=()=>{};
 }
 
+function overlayOpen(){return fullOpen||!$('logpanel').hidden||$('drawer').classList.contains('on')||!sheet.hidden;}
+function refreshScreen(){if(ws&&ws.readyState===1)send({t:'refresh'});}
+// 浮層を開いている間に捨てたフレームがあるか。閉じたあと 1 枚だけ refresh を
+// 投げても、その 1 枚がまだ overlayOpen() の間に届くと捨てられて画面が固まる。
+// 実際に描けるまで繰り返し要求する。
+let dirtyFrame=false;
+setInterval(()=>{if(dirtyFrame&&!overlayOpen())refreshScreen();},400);
 function frame(buf){
+ // 全文/日志/设置を開いている間は PNG を解釈しない。地図アニメが動いている
+ // ゲームだと、裏で 10fps のデコードが走ってスクロールが引っかかる
+ if(overlayOpen()){dirtyFrame=true;send({t:'ack'});return;}
  const d=new DataView(buf);if(d.byteLength<16||d.getUint8(0)!==69||d.getUint8(1)!==77)return;
+ dirtyFrame=false;
  setScroll(d.getInt32(8,true),d.getInt32(12,true));
  const blob=new Blob([buf.slice(16)],{type:'image/png'}),url=URL.createObjectURL(blob);
  const img=new Image();
  img.onload=()=>{
-  // 画像は描画倍率ぶん大きい。クリック座標の基準は metrics の論理サイズのまま。
   const old=frameURL;frameURL=url;screen.src=url;
   if(old)URL.revokeObjectURL(old);
+  // 新しいフレームは要求した位置を映している。指に合わせてずらした分を戻す
+  if(visualPx!==0){visualPx=0;applyTransform();}
   send({t:'ack'});
  };
  img.onerror=()=>{URL.revokeObjectURL(url);send({t:'ack'})};
@@ -305,13 +383,28 @@ function setScroll(s,max){
  s=Number(s)||0;max=Number(max)||0;scrollPos=s;scrollMax=max;
  $('latest').hidden=s>=max;
  if(s>=max){browsing=false;return;}
- // 履歴を遡っていないのに最下部から離れている = 行が増えたときに取り残された状態。
- // そのままだと新しい文が画面の外に出るので、そっと最新へ戻す
  if(!browsing&&!followTick){
   followTick=setTimeout(()=>{followTick=0;if(!browsing&&scrollPos<scrollMax)send({t:'latest'});},140);
  }
 }
 
+/* ── 字号（局内） ──────────────────────────────────── */
+function currentFont(){const v=Number(setting.fontSize)||0;return v>0?v:engineFont;}
+function syncFont(){
+ const v=currentFont();
+ $('fsize').textContent=v;
+ $('fs-val').textContent=v;
+ $('fontminus').style.opacity=v>8?'1':'.45';
+ $('fontplus').style.opacity=v<44?'1':'.45';
+}
+function setFont(delta){
+ const v=Math.max(8,Math.min(44,currentFont()+delta));
+ if(v===currentFont()&&delta!==0)return;
+ setting.fontSize=v;syncFont();native('settings',setting);haptic();
+ toast('字号 '+v+' · 重新进入游戏后生效');
+}
+
+/* ── 全文 ─────────────────────────────────────────── */
 let fullOpen=false,fullFs=15;
 function applyFullFont(){
  $('fulltext').style.fontSize=fullFs+'px';
@@ -319,68 +412,109 @@ function applyFullFont(){
  $('fullplus').style.opacity=fullFs>=26?'.45':'1';
 }
 function openFull(){
- fullOpen=true;$('full').hidden=false;applyFullFont();
+ dirtyFrame=true;fullOpen=true;$('full').hidden=false;applyFullFont();
  $('fulltext').textContent='读取中…';$('fullcount').textContent='';
  send({t:'dump',n:800});
  if(!ready)$('fulltext').textContent='未连接到游戏';
 }
-function closeFull(){fullOpen=false;$('full').hidden=true;}
+function closeFull(){fullOpen=false;$('full').hidden=true;refreshScreen();}
 function setFullText(list){
  if(!fullOpen)return;
  const arr=Array.isArray(list)?list:[];
  $('fulltext').textContent=arr.join('\n');
  $('fullcount').textContent=arr.length?arr.length+' 行':'';
- // 開いた直後は最新 (最下部) を見せる。状態欄はその少し上にあるので、そこから遡る
  const body=$('fullbody');
  body.scrollTop=body.scrollHeight;
 }
 
-function syncPad(){ // 选项面板显示时收起数字键盘；否则按常驻开关显示。
- pad.classList.toggle('off',!setting.pad||padSuppressed);
+/* ── 数字键盘 / 手柄 ───────────────────────────────── */
+function syncPad(){ // 选项面板显示时收起数字键盘；否则按开关显示。
+ const on=!!setting.pad && !padSuppressed;
+ pad.classList.toggle('off',!on);
+ $('keys').classList.toggle('on',!!setting.pad);
  pad.style.setProperty('--pad-a',setting.padAlpha);
  pad.style.setProperty('--pad-k',Math.min(.72,setting.padAlpha+.12));
  $('sw-pad').setAttribute('aria-checked',String(!!setting.pad));
+ $('sw-pad2').setAttribute('aria-checked',String(!!setting.pad));
  $('sw-choices').setAttribute('aria-checked',String(!!setting.showChoices));
 }
 function syncGp(){
  const on=!!setting.gamepad;
  $('gp').hidden=!on;
- $('gpbtn').setAttribute('aria-checked',String(on));
- $('gpbtn').style.background=on?'rgba(200,238,173,.82)':'';
- $('gpbtn').style.color=on?'#1b2416':'';
+ $('gpbtn').classList.toggle('on',on);
 }
 function syncOrient(){
  const on=!!setting.lock;
- const use=document.getElementById('i-lock-use')||document.querySelector('#orient use');
+ const use=document.querySelector('#orient use');
  if(use)use.setAttribute('href',on?'#i-lock':'#i-unlock');
- $('orient').setAttribute('aria-checked',String(on));
- $('orient').style.background=on?'rgba(200,238,173,.82)':'';
- $('orient').style.color=on?'#1b2416':'';
+ $('orient').classList.toggle('on',on);
 }
-function syncFont(){
- const v=Number(setting.fontSize)||0;
- $('fontminus').style.opacity=v>0? '1':'.55';
- $('fontplus').style.opacity='1';
-}
-function setFont(delta){
- const base=(Number(setting.fontSize)>0?Number(setting.fontSize):engineFont);
- const v=Math.max(8,Math.min(44,base+delta));
- setting.fontSize=v;syncFont();native('settings',setting);
- toast('字号 '+v+' · 重新进入游戏后生效');
-}
+
+/* ── 选项（带颜色 + 手柄选择） ─────────────────────── */
+const PALETTE=['#c79be8','#8fd3c7','#e8b98f','#9fb8e8','#d9a3b8','#b9d98f'];
+function tint(hex,a){if(!hex)return null;const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
 function setChoices(list){
  const box=$('choices'),arr=Array.isArray(list)?list:[];
+ const sig=JSON.stringify(arr);
  lastChoices=arr;
+ if(sig!==choiceSig){choiceSig=sig;selIndex=-1;}
  choicesVisible=arr.length>0 && setting.showChoices;
  padSuppressed=choicesVisible;
  if(!choicesVisible){box.hidden=true;box.innerHTML='';syncPad();return;}
- box.innerHTML=arr.map(c=>{const raw=String(c.text||c.value||'').trim();const label=raw.replace(/^\[(\d+)\]\s*/,'$1  ');return `<button data-choice="${esc(String(c.value??''))}" title="${esc(label)}"><span class="ctext">${esc(label)}</span></button>`}).join('');
+ box.innerHTML=arr.map((c,i)=>{
+  const raw=String(c.text||c.value||'').trim();
+  const label=raw.replace(/^\[(\d+)\]\s*/,'$1  ');
+  const hex=/^#[0-9a-f]{6}$/i.test(String(c.color||''))?String(c.color):PALETTE[i%PALETTE.length];
+  const bg=tint(hex,.24),bd=tint(hex,.62),sel=tint(hex,.34);
+  return `<button data-choice="${esc(String(c.value??''))}" data-i="${i}" title="${esc(label)}" style="--cbar:${hex};--cbg:${bg};--cbd:${bd};--csel:${sel}"><span class="ctext">${esc(label)}</span></button>`;
+ }).join('')+(arr.length>1?'<span class="hint">▲▼ 选择 · A 确认</span>':'');
  applyChoiceLayout();
  box.hidden=false;
- box.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>{haptic();text.value=b.dataset.choice;submit();});
+ box.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.i);selectChoice(i,false);clickChoice(i);});
+ if(selIndex>=0)selectChoice(selIndex,false);
  syncPad();
 }
-function openSheet(){sheet.hidden=false;}
+function selectChoice(i,scroll=true){
+ const box=$('choices'),btns=[...box.querySelectorAll('[data-choice]')];
+ if(!btns.length){selIndex=-1;return;}
+ selIndex=((i%btns.length)+btns.length)%btns.length;
+ btns.forEach((b,k)=>b.classList.toggle('sel',k===selIndex));
+ if(scroll&&btns[selIndex].scrollIntoView)btns[selIndex].scrollIntoView({block:'nearest'});
+}
+function clickChoice(i){
+ const btns=[...$('choices').querySelectorAll('[data-choice]')];
+ if(!btns[i])return;
+ haptic();
+ text.value=btns[i].dataset.choice;
+ submit();
+}
+function moveChoice(d){
+ if(!choicesVisible)return false;
+ const n=lastChoices.length;
+ selectChoice(selIndex<0?(d<0?n-1:0):selIndex+d);
+ haptic();return true;
+}
+
+/* ── 设置面板 / 左栏 / 日志 / 调试 ─────────────────── */
+function openSheet(){dirtyFrame=true;sheet.hidden=false;}
+function openDrawer(){dirtyFrame=true;$('scrim').hidden=false;requestAnimationFrame(()=>$('scrim').classList.add('on'));$('drawer').classList.add('on');}
+function closeDrawer(){$('drawer').classList.remove('on');$('scrim').classList.remove('on');setTimeout(()=>{if(!$('drawer').classList.contains('on'))$('scrim').hidden=true;},240);}
+function closeDrawerAndRefresh(){closeDrawer();setTimeout(refreshScreen,260);}
+function openLog(){
+ dirtyFrame=true;$('logpanel').hidden=false;$('logbody').textContent='读取中…';
+ fetch('/log'+(token?'?token='+encodeURIComponent(token):'')).then(r=>r.text()).then(t=>{$('logbody').textContent=t||'（空）';$('logbody').scrollTop=$('logbody').scrollHeight;}).catch(e=>{$('logbody').textContent='读取失败：'+e.message;});
+}
+function toggleDebug(){
+ const el=$('debug');el.hidden=!el.hidden;
+ $('dbgstate').textContent=el.hidden?'关':'开';
+ clearInterval(debugTimer);debugTimer=0;
+ if(el.hidden)return;
+ const tick=()=>fetch('/stats'+(token?'?token='+encodeURIComponent(token):'')).then(r=>r.json()).then(s=>{
+  const l=s.live||{};
+  el.textContent=`gen ${s.generation}  enc ${s.encoded}  skip ${s.skipped}\nrender ${s.renderMs}ms  png ${s.encodeMs}ms  ${Math.round((s.pngBytes||0)/1024)}KB\nlive ${l.calls||0}/${l.throttled||0}/${l.sent||0}  ws ${s.clients||0}`;
+ }).catch(()=>{});
+ tick();debugTimer=setInterval(tick,1000);
+}
 function submit(){
  if($('send').disabled)return;
  const v=text.value.trim();
@@ -390,8 +524,9 @@ function submit(){
  if(mode==='enter')send({t:'enter'});else send({t:'submit',v:v});
  text.value='';text.blur();
 }
-function wake(){const f=$('float');f.classList.remove('dim');clearTimeout(dimTimer);dimTimer=setTimeout(()=>f.classList.add('dim'),5000);}
+function wake(){const f=$('bar');f.classList.remove('dim');clearTimeout(dimTimer);dimTimer=setTimeout(()=>f.classList.add('dim'),5000);}
 
+/* ── 事件 ─────────────────────────────────────────── */
 document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{
  if(single){if(!ready||inflight)return;text.value=b.dataset.key;submit();return;}
  haptic();text.value+=b.dataset.key;text.dispatchEvent(new Event('input'));
@@ -400,33 +535,59 @@ $('del').onclick=()=>{haptic();text.value=text.value.slice(0,-1)};
 $('del').oncontextmenu=e=>{e.preventDefault();text.value=''};
 $('kb').onclick=()=>{manualKb=!manualKb;text.inputMode=manualKb?'text':'none';if(manualKb){text.focus();toast('可输入文字、负数或粘贴内容')}else text.blur()};
 $('send').onclick=submit;
-$('keys').onclick=()=>{haptic();setting.pad=!setting.pad;syncPad();native('settings',setting)};
+$('keys').onclick=()=>{haptic();setting.pad=!setting.pad;syncPad();native('settings',setting);toast(setting.pad?'数字输入 开':'数字输入 关')};
 $('gpbtn').onclick=()=>{haptic();setting.gamepad=!setting.gamepad;syncGp();native('settings',setting)};
 $('orient').onclick=()=>{haptic();setting.lock=!setting.lock;syncOrient();native('orient',!!setting.lock);native('settings',setting)};
 $('fontminus').onclick=()=>{haptic();setFont(-1)};
+$('fontplus').onclick=()=>{haptic();setFont(1)};
+$('fsize').onclick=()=>{const v=currentFont();toast('当前字号 '+v+'px · A−/A+ 调整')};
 $('fullbtn').onclick=()=>{haptic();openFull()};
 $('fullclose').onclick=closeFull;
 $('fulltop').onclick=()=>{$('fullbody').scrollTo({top:0,behavior:'smooth'})};
 $('fullminus').onclick=()=>{fullFs=Math.max(11,fullFs-1);applyFullFont()};
 $('fullplus').onclick=()=>{fullFs=Math.min(26,fullFs+1);applyFullFont()};
-$('fontplus').onclick=()=>{haptic();setFont(1)};
+$('menu').onclick=()=>{haptic();openDrawer()};
+$('scrim').onclick=closeDrawerAndRefresh;
+$('logclose').onclick=()=>{$('logpanel').hidden=true;refreshScreen()};
+$('logrefresh').onclick=()=>openLog();
+$('logsave').onclick=()=>native('savelog');
+document.querySelectorAll('#drawer [data-dw]').forEach(b=>b.onclick=()=>{
+ const k=b.dataset.dw;haptic();
+ if(k==='reload'){closeDrawer();setTimeout(()=>location.reload(),160);return;}
+ if(k==='title'){
+  // WebView では window.confirm が実装されていない (常に false) ため、
+  // 確認ダイアログを挟まずそのまま戻す。メニュー側に「不保存」と明記してある。
+  closeDrawerAndRefresh();
+  send({t:'title'});toast('正在返回标题…');
+  return;
+ }
+ if(k==='settings'){closeDrawer();setTimeout(openSheet,180);return;}
+ if(k==='lang'){closeDrawerAndRefresh();toast('界面文字跟随游戏；语言切换由游戏内菜单决定');return;}
+ if(k==='log'){closeDrawer();setTimeout(openLog,180);return;}
+ if(k==='savelog'){closeDrawerAndRefresh();native('savelog');toast('正在保存日志…');return;}
+ if(k==='debug'){toggleDebug();return;}
+ if(k==='skip'){closeDrawerAndRefresh();send({t:'skipall'});return;}
+});
 document.querySelectorAll('#gp [data-gp]').forEach(b=>b.onclick=()=>{
  const k=b.dataset.gp;haptic();
- if(k==='a'){if(/^[-+]?\d+$/.test(text.value.trim()))submit();else send({t:'enter'});}
- else if(k==='b')send({t:'skip'});
- else if(k==='latest'){browsing=false;send({t:'latest'});}
- else if(k==='up')queueScroll(3);
- else if(k==='down')queueScroll(-3);
- else if(k==='left')queueScroll(10);
- else if(k==='right')queueScroll(-10);
+ if(k==='a'){
+  if(choicesVisible&&selIndex>=0){clickChoice(selIndex);return;}
+  if(/^[-+]?\d+$/.test(text.value.trim())&&ready){submit();return;}
+  if(choicesVisible&&lastChoices.length===1){clickChoice(0);return;}
+  if(ready)send({t:'enter'});
+ }
+ else if(k==='b'){if(choicesVisible&&selIndex>=0){selIndex=-1;document.querySelectorAll('#choices .sel').forEach(e=>e.classList.remove('sel'));}else send({t:'skip'});}
+ else if(k==='latest'){browsing=false;visualPx=0;applyTransform();send({t:'latest'});}
+ else if(k==='up'){if(!moveChoice(-1))queueScroll(3);}
+ else if(k==='down'){if(!moveChoice(1))queueScroll(-3);}
+ else if(k==='left'){if(!moveChoice(setting.choiceCols>1?-setting.choiceCols:-1))queueScroll(10);}
+ else if(k==='right'){if(!moveChoice(setting.choiceCols>1?setting.choiceCols:1))queueScroll(-10);}
 });
-$('menu').onclick=()=>{haptic();openSheet()};
-$('skip').onclick=()=>{haptic();send({t:'skipall'})};
 $('back').onclick=()=>native('home');
-$('done').onclick=()=>{sheet.hidden=true};
-$('latest').onclick=()=>{browsing=false;send({t:'latest'})};
+$('done').onclick=()=>{sheet.hidden=true;refreshScreen()};
+$('latest').onclick=()=>{browsing=false;visualPx=0;applyTransform();send({t:'latest'})};
 $('status').onclick=()=>{if(!ws||ws.readyState>1)connect()};
-$('sheet').onclick=e=>{if(e.target===$('sheet'))sheet.hidden=true};
+$('sheet').onclick=e=>{if(e.target===$('sheet')){sheet.hidden=true;refreshScreen();}};
 $('zoom').oninput=()=>{setting.scale=Number($('zoom').value)/100;zoom=setting.scale;$('zoomval').value=$('zoom').value+'%';layout()};
 $('fit-fill').onclick=()=>{setting.fit='fill';syncFit();layout();send({t:'fit',v:'fill'});native('settings',setting)};
 $('fit-contain').onclick=()=>{setting.fit='contain';syncFit();layout();send({t:'fit',v:'contain'});native('settings',setting)};
@@ -434,13 +595,16 @@ $('zoom').onchange=()=>native('settings',setting);
 $('sw-images').onclick=()=>{setting.images=!setting.images;applySettings();native('settings',setting)};
 $('sw-haptic').onclick=()=>{setting.haptic=!setting.haptic;applySettings();native('settings',setting)};
 $('sw-pad').onclick=()=>{setting.pad=!setting.pad;syncPad();native('settings',setting)};
+$('sw-pad2').onclick=()=>{setting.pad=!setting.pad;syncPad();native('settings',setting);toast(setting.pad?'数字输入 开':'数字输入 关')};
 $('sw-choices').onclick=()=>{setting.showChoices=!setting.showChoices;syncPad();setChoices(lastChoices);native('settings',setting)};
 $('padalpha').oninput=()=>{setting.padAlpha=Number($('padalpha').value)/100;$('padalphaval').value=$('padalpha').value+'%';syncPad()};
 $('padalpha').onchange=()=>native('settings',setting);
 $('choicescale').oninput=()=>{setting.choiceScale=Number($('choicescale').value)/100;applyChoiceLayout()};
 document.querySelectorAll('#choicecols [data-cols]').forEach(b=>b.onclick=()=>{setting.choiceCols=Number(b.dataset.cols);applyChoiceLayout();native('settings',setting)});
 $('choicescale').onchange=()=>native('settings',setting);
-$('reset').onclick=()=>{setting.scale=1;setting.fit='fill';setting.images=true;setting.pad=true;setting.padAlpha=.35;setting.choiceScale=1;setting.choiceCols=2;setting.showChoices=true;setting.gamepad=false;setting.lock=false;setting.fontSize=0;applySettings();native('settings',setting);native('orient',false)};
+$('fs-minus').onclick=()=>setFont(-1);
+$('fs-plus').onclick=()=>setFont(1);
+$('reset').onclick=()=>{setting.scale=1;setting.fit='fill';setting.images=true;setting.pad=false;setting.padAlpha=.35;setting.choiceScale=1;setting.choiceCols=2;setting.showChoices=true;setting.gamepad=false;setting.lock=false;setting.fontSize=0;applySettings();native('settings',setting);native('orient',false)};
 $('savehelp').onclick=()=>toast('用游戏内菜单存档；游戏库可导出/恢复存档备份');
 
 text.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
@@ -449,18 +613,27 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Enter'){e.preventDefault();submit();}
  else if(/^\d$/.test(e.key)){if(single){text.value=e.key;submit();}else{text.value+=e.key;}e.preventDefault();}
  else if(e.key==='Backspace'){text.value=text.value.slice(0,-1);e.preventDefault();}
- else if(e.key==='Escape'){sheet.hidden=true;}
+ else if(e.key==='Escape'){if(!sheet.hidden){sheet.hidden=true;refreshScreen();}closeFull();if(!$('logpanel').hidden){$('logpanel').hidden=true;refreshScreen();}closeDrawerAndRefresh();}
+ else if(e.key==='ArrowUp'&&choicesVisible){e.preventDefault();moveChoice(-1);}
+ else if(e.key==='ArrowDown'&&choicesVisible){e.preventDefault();moveChoice(1);}
 });
 
+/* ── 拖动 / 滚动 ───────────────────────────────────── */
 let g=null,scrollPending=0,scrollTick=0,browsing=false,followTick=0;
 function queueScroll(n){
- // 上へ遡る操作をしたら「履歴を見ている」とみなし、勝手に最新へ戻さない
  if(n>0)browsing=true;
  scrollPending+=n;
- if(!scrollTick)scrollTick=setTimeout(()=>{send({t:'scrollLines',n:scrollPending});scrollPending=0;scrollTick=0},35);
+ if(!scrollTick)scrollTick=setTimeout(()=>{send({t:'scrollLines',n:scrollPending});scrollPending=0;scrollTick=0},30);
+}
+function dragVisual(dy){
+ if(setting.fit==='contain')return;
+ visualPx+=dy;
+ const cap=stage.clientHeight*1.1;
+ visualPx=Math.max(-cap,Math.min(cap,visualPx));
+ applyTransform();
 }
 stage.addEventListener('pointerdown',e=>{
- if(e.target.closest('button,input,#pad,#sheet,#float,#status,#gp,#choices,#full'))return;
+ if(e.target.closest('button,input,#pad,#sheet,#bar,#drawer,#scrim,#gp,#choices,#full,#logpanel'))return;
  wake();
  g={id:e.pointerId,x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY,moved:false,t:performance.now()};
  try{stage.setPointerCapture(e.pointerId)}catch(_){}
@@ -475,6 +648,7 @@ stage.addEventListener('pointermove',e=>{
    const r=contentRect();
    const px=Math.max(10,lineHeight*(r.width/engineW));
    const n=Math.trunc(dy/px);
+   dragVisual(dy);
    if(n){queueScroll(n);g.ly=e.clientY;}
   }
   g.lx=e.clientX;
@@ -492,16 +666,15 @@ stage.addEventListener('pointerup',e=>{
  inflight=true;updateSend();
  send({t:'click',x:gx,y:gy,right:dur>600,id:Date.now()%1000000});
 });
-stage.addEventListener('pointercancel',()=>{g=null});
+stage.addEventListener('pointercancel',()=>{g=null;visualPx=0;applyTransform()});
 stage.addEventListener('contextmenu',e=>e.preventDefault());
 stage.addEventListener('wheel',e=>{e.preventDefault();queueScroll(Math.sign(-e.deltaY)*3)},{passive:false});
 
 window.Era={
- title:v=>{document.title=v+' · era for Android'},
- settings:v=>{setting=Object.assign({},setting,v||{});applySettings()},
+ title:v=>{document.title=v+' · era for Android';$('dwgame').textContent=v},
+ settings:v=>{if(v&&v.padv!==2){v.pad=false;v.padv=2;}setting=Object.assign({},setting,v||{});applySettings()},
  error:v=>toast(v)
 };
 applySettings();connect();wake();
-// 前回の向き固定を復元 (設定はゲームごとに保存されている)
 if(setting.lock)native('orient',true);
 </script></body></html>

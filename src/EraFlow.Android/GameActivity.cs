@@ -11,7 +11,7 @@ namespace EraFlow;
 [Activity(Label="era for Android",Exported=false,Process=":game",Theme="@style/EraPlayTheme",ScreenOrientation=ScreenOrientation.SensorLandscape,WindowSoftInputMode=SoftInput.AdjustResize,ConfigurationChanges=ConfigChanges.ScreenSize|ConfigChanges.Orientation|ConfigChanges.KeyboardHidden)]
 public sealed class GameActivity:Activity
 {
- WebView web=null!;EmueraWebHost? host;bool exiting;string title="",gameId="";
+ WebView web=null!;EmueraWebHost? host;bool exiting;string title="",gameId="",gamePath="";
  protected override async void OnCreate(Bundle? state)
  {
   base.OnCreate(state);Window!.AddFlags(WindowManagerFlags.KeepScreenOn);
@@ -23,6 +23,7 @@ public sealed class GameActivity:Activity
   try
   {
    string path=Path.GetFullPath(Intent?.GetStringExtra("path")??"");string root=Path.Combine(FilesDir!.AbsolutePath,"library")+Path.DirectorySeparatorChar;
+   gamePath=path;
    bool external=Intent?.GetBooleanExtra("external",false)==true;
    if(external)
    {
@@ -74,8 +75,25 @@ public sealed class GameActivity:Activity
    case "settings":GetSharedPreferences("player",Android.Content.FileCreationMode.Private)!.Edit()!.PutString(gameId,d.GetProperty("value").GetRawText())!.Apply();break;
    // 转向锁: 固定すると今の向きで固定、解除すると端末の向きに従う
    case "orient":RequestedOrientation=d.GetProperty("value").GetBoolean()?ScreenOrientation.Locked:ScreenOrientation.SensorLandscape;break;
+   // 左メニューの「保存日志」。ゲームの emuera.log をアプリ専用の外部領域へ複製する
+   case "savelog":SaveLog();break;
   }}catch(Exception e){Android.Util.Log.Warn("EraFlow",e.Message);}
  });
+ /// <summary>emuera.log を /sdcard/Android/data/&lt;pkg&gt;/files/ へ複製する。</summary>
+ void SaveLog()
+ {
+  try
+  {
+   string src=Path.Combine(gamePath,"emuera.log");
+   if(!File.Exists(src)){Platform.Send(this,web,"tip","游戏还没有写日志（发生错误后才会生成）");return;}
+   string dir=GetExternalFilesDir(null)?.AbsolutePath??FilesDir!.AbsolutePath;
+   string name="emuera-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".log";
+   string dst=Path.Combine(dir,name);
+   File.Copy(src,dst,true);
+   Platform.Send(this,web,"tip","日志已保存到 Android/data/"+PackageName+"/files/"+name);
+  }
+  catch(Exception e){Platform.Send(this,web,"tip","保存日志失败："+e.Message);}
+ }
  void ConfirmExit(){new AlertDialog.Builder(this).SetTitle("返回游戏库？").SetMessage("请先使用游戏内的存档功能保存进度。").SetNegativeButton("继续游玩",(_,_)=>{}).SetPositiveButton("返回游戏库",(_,_)=>{exiting=true;Finish();}).Show();}
  public override void OnBackPressed()=>ConfirmExit();
  protected override void OnPause(){base.OnPause();web?.OnPause();}

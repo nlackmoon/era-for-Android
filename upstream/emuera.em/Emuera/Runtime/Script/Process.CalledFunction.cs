@@ -1,7 +1,8 @@
-﻿using MinorShift.Emuera.GameData.Function;
+using MinorShift.Emuera.GameData.Function;
 using MinorShift.Emuera.GameData.Variable;
 using MinorShift.Emuera.GameProc;
 using MinorShift.Emuera.Runtime.Config;
+using MinorShift.Emuera.Runtime.Script.Loader;
 using MinorShift.Emuera.Runtime.Script.Statements;
 using MinorShift.Emuera.Runtime.Script.Statements.Expression;
 using MinorShift.Emuera.Runtime.Script.Statements.Function;
@@ -121,7 +122,7 @@ internal sealed class CalledFunction
 			}
 			return null;
 		}
-		else if (labelline.IsMethod)
+		if (labelline.IsMethod)
 		{
 			throw new CodeEE(string.Format(trerror.CallToUserFunc.Text, labelline.LabelName, labelline.Position.Value.Filename, labelline.Position.Value.LineNo.ToString()));
 		}
@@ -153,6 +154,8 @@ internal sealed class CalledFunction
 	/// </summary>
 	public UserDefinedFunctionArgument ConvertArg(List<AExpression> srcArgs, out string errMes)
 	{
+		// 呼ばれなかった関数はここで初めて本体を解析する（解析は実行時のみ）。
+		ErbLoader.EnsureParsed(TopLabel);
 		errMes = null;
 		if (TopLabel.IsError)
 		{

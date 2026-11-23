@@ -59,4 +59,9 @@ abstract class AConsoleColoredPart : AConsoleDisplayNode
 	protected Color Color { get; set; }
 	protected Color ButtonColor { get; set; }
 	protected bool colorChanged;
+
+	/// <summary>画面側 (WebView) が選択肢ボタンの色を決めるための読み取り口。</summary>
+	public Color DisplayColor => Color;
+	/// <summary>選択中の色 (FocusColor など)。</summary>
+	public Color DisplayButtonColor => ButtonColor;
 }

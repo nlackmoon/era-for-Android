@@ -19,11 +19,17 @@ internal sealed class VariableLocal
 	//VariableData varData;
 	CreateLocalVariableToken creater;
 	Dictionary<string, LocalVariableToken> localVarTokens = [];
+	// 関数本体の解析は並列に走る。LOCAL/ARG などの初出は複数スレッドから
+	// 同時に登録され得るので、辞書はロックして扱う。
+	readonly object localVarLock = new();
 	public LocalVariableToken GetExistLocalVariableToken(string subKey)
 	{
-		if (localVarTokens.TryGetValue(subKey, out LocalVariableToken ret))
-			return ret;
-		return null;
+		lock (localVarLock)
+		{
+			if (localVarTokens.TryGetValue(subKey, out LocalVariableToken ret))
+				return ret;
+			return null;
+		}
 	}
 
 	public int GetDefaultSize()
@@ -33,59 +39,67 @@ internal sealed class VariableLocal
 
 	public LocalVariableToken GetNewLocalVariableToken(string subKey, FunctionLabelLine func)
 	{
-		LocalVariableToken ret = null;
-		int newSize = 0;
-		if (varCode == VariableCode.LOCAL)
-			newSize = func.LocalLength;
-		else if (varCode == VariableCode.LOCALS)
-			newSize = func.LocalsLength;
-		else if (varCode == VariableCode.ARG)
-			newSize = func.ArgLength;
-		else if (varCode == VariableCode.ARGS)
-			newSize = func.ArgsLength;
-		if (newSize > 0)
+		lock (localVarLock)
 		{
-			if (newSize < size && (varCode == VariableCode.ARG || varCode == VariableCode.ARGS))
-				newSize = size;
-			ret = creater(varCode, subKey, newSize);
-		}
-		else if (newSize == 0)
-			ret = creater(varCode, subKey, size);
-		else
-		{
-			ret = creater(varCode, subKey, size);
-			LogicalLine line = GlobalStatic.Process.GetScaningLine();
-			if (line != null)
+			if (localVarTokens.TryGetValue(subKey, out LocalVariableToken exists))
+				return exists;
+			LocalVariableToken ret = null;
+			int newSize = 0;
+			if (varCode == VariableCode.LOCAL)
+				newSize = func.LocalLength;
+			else if (varCode == VariableCode.LOCALS)
+				newSize = func.LocalsLength;
+			else if (varCode == VariableCode.ARG)
+				newSize = func.ArgLength;
+			else if (varCode == VariableCode.ARGS)
+				newSize = func.ArgsLength;
+			if (newSize > 0)
 			{
-				if (!func.IsSystem)
-					ParserMediator.Warn(string.Format(trerror.UseArgVarInHasNotArgFunc.Text, varCode), line, 1, false, false);
-				else
-					ParserMediator.Warn(string.Format(trerror.UseArgVarInSystemFunc.Text, func.LabelName, varCode), line, 1, false, false);
+				if (newSize < size && (varCode == VariableCode.ARG || varCode == VariableCode.ARGS))
+					newSize = size;
+				ret = creater(varCode, subKey, newSize);
 			}
-			//throw new CodeEE("この関数に引数変数\"" + varCode + "\"は定義されていません");
+			else if (newSize == 0)
+				ret = creater(varCode, subKey, size);
+			else
+			{
+				ret = creater(varCode, subKey, size);
+				LogicalLine line = GlobalStatic.Process.GetScaningLine();
+				if (line != null)
+				{
+					if (!func.IsSystem)
+						ParserMediator.Warn(string.Format(trerror.UseArgVarInHasNotArgFunc.Text, varCode), line, 1, false, false);
+					else
+						ParserMediator.Warn(string.Format(trerror.UseArgVarInSystemFunc.Text, func.LabelName, varCode), line, 1, false, false);
+				}
+				//throw new CodeEE("この関数に引数変数\"" + varCode + "\"は定義されていません");
+			}
+			localVarTokens[subKey] = ret;
+			return ret;
 		}
-		localVarTokens.Add(subKey, ret);
-		return ret;
 	}
 
 	public void ResizeLocalVariableToken(string subKey, int newSize)
 	{
-		if (localVarTokens.TryGetValue(subKey, out LocalVariableToken ret))
+		lock (localVarLock)
 		{
-			if (size < newSize)
-				ret.resize(newSize);
+			if (localVarTokens.TryGetValue(subKey, out LocalVariableToken ret))
+			{
+				if (size < newSize)
+					ret.resize(newSize);
+				else
+					ret.resize(size);
+			}
 			else
-				ret.resize(size);
-		}
-		else
-		{
-			if (newSize > size)
-				ret = creater(varCode, subKey, newSize);
-			else if (newSize == 0)
-				ret = creater(varCode, subKey, size);
-			else
-				return;
-			localVarTokens.Add(subKey, ret);
+			{
+				if (newSize > size)
+					ret = creater(varCode, subKey, newSize);
+				else if (newSize == 0)
+					ret = creater(varCode, subKey, size);
+				else
+					return;
+				localVarTokens[subKey] = ret;
+			}
 		}
 	}
 

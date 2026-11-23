@@ -8,6 +8,7 @@ using MinorShift.Emuera.GameView;
 using MinorShift.Emuera.Runtime.Config;
 using MinorShift.Emuera.Runtime.Config.JSON;
 using MinorShift.Emuera.Runtime.Utils.EvilMask;
+using MinorShift.Emuera.UI.Game;
 using System;
 using System.IO;
 using System.Linq;
@@ -555,6 +556,18 @@ namespace MinorShift.Emuera.Api
 		/// <summary>最新行まで戻す。動いたら true。</summary>
 		public bool ScrollToLatest() => window != null && window.ReturnToLatestLine();
 
+		/// <summary>
+		/// タイトルへ戻る。上流のメニュー「タイトルへ戻る」と同じ経路
+		/// (ClearDisplay → BeginTitle → タイトル画面の待ちまで実行) を通す。
+		/// </summary>
+		public void GoToTitle()
+		{
+			if (console == null)
+				return;
+			window?.MarkDirty();
+			console.GotoTitle();
+		}
+
 		/// <summary>メッセージ待ちを進める (Enter 相当)。</summary>
 		public EmueraTapResult PressEnter(bool skipMessage = false)
 		{
@@ -628,7 +641,48 @@ namespace MinorShift.Emuera.Api
 			if (console == null) return [];
 			return console.DisplayLineList.SelectMany(l => l.Buttons)
 				.Where(b => b.IsButton && !b.IsErrorButton && b.Generation == console.LastButtonGeneration)
-				.Select(b => (object)new { text = CleanDumpLine(b.ToString()), value = b.IsInteger ? b.Input.ToString(System.Globalization.CultureInfo.InvariantCulture) : b.Inputs }).ToArray();
+				.Select(b => (object)new
+				{
+					text = CleanDumpLine(b.ToString()),
+					value = b.IsInteger ? b.Input.ToString(System.Globalization.CultureInfo.InvariantCulture) : b.Inputs,
+					// 選択肢の文字色。画面側はこれでボタンの色を決める
+					// (eraTW の行動選択は「ピンク=性行動」のように色で種類を分けている)
+					color = ChoiceColor(b)
+				}).ToArray();
+		}
+
+		/// <summary>
+		/// 選択肢の「意味のある色」を 1 つ選ぶ。装飾の最初の部分は番号 ([2000] など) で
+		/// 白のことが多いので、彩度が最も高い部分を採る。全体が白黒なら null。
+		/// </summary>
+		static string ChoiceColor(ConsoleButtonString button)
+		{
+			var parts = button.StrArray;
+			if (parts == null || parts.Length == 0)
+				return null;
+			System.Drawing.Color best = default;
+			double bestScore = 0;
+			foreach (var part in parts)
+			{
+				if (part is not MinorShift.Emuera.UI.Game.AConsoleColoredPart colored || string.IsNullOrEmpty(part.Text))
+					continue;
+				var c = colored.DisplayColor;
+				int max = Math.Max(c.R, Math.Max(c.G, c.B));
+				int min = Math.Min(c.R, Math.Min(c.G, c.B));
+				if (max < 48)
+					continue;
+				double sat = (double)(max - min) / max;
+				// 彩度だけだと暗い色が勝つので、明度も少し掛ける
+				double score = sat * (0.35 + 0.65 * max / 255.0);
+				if (score > bestScore)
+				{
+					bestScore = score;
+					best = c;
+				}
+			}
+			if (bestScore < 0.2)
+				return null;
+			return $"#{best.R:x2}{best.G:x2}{best.B:x2}";
 		}
 		public int SelectableButtonCount()
 		{

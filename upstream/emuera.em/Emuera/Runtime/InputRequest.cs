@@ -51,6 +51,13 @@ internal sealed class InputRequest
 	public bool StopMesskip;
 	public bool IsSystemInput;
 
+	/// <summary>
+	/// 入力待ちの間、画面を最下部へ引き戻さない (Skia/EM+EE の NF = NoFocus)。
+	/// 動く地図のように「待機中も毎フレーム描き直す」処理で、履歴を読んでいる人の
+	/// スクロール位置を奪わないために使う。
+	/// </summary>
+	public bool NoFocus;
+
 	public bool HasDefValue;
 	public long DefIntValue;
 	public string DefStrValue;

@@ -27,6 +27,24 @@ internal sealed class ErbLoader
 		output = main;
 		parentProcess = proc;
 		this.exm = exm;
+		Current = this;
+	}
+
+	/// <summary>
+	/// 現在読み込み中のローダー。呼ばれなかった関数を「初めて呼ばれた時点」で解析するために使う。
+	/// </summary>
+	internal static ErbLoader Current;
+
+	/// <summary>
+	/// 本体がまだ解析されていなければ、その場で解析する。
+	/// 呼び出し側（CALL / CALLFORM / 式中関数）は解析済みの引数情報を前提にしているため、
+	/// 関数へ入る直前で必ず通す。
+	/// </summary>
+	internal static void EnsureParsed(FunctionLabelLine label)
+	{
+		if (label == null || label.BodyParsed)
+			return;
+		Current?.ParseFunctionWithCatch(label);
 	}
 	readonly Process parentProcess;
 	readonly ExpressionMediator exm;
@@ -792,15 +810,18 @@ internal sealed class ErbLoader
 		{//callform系が使われたら全ての関数が呼び出されたとみなす。
 			if (Program.AnalysisMode)
 				output.PrintSystemLine(trerror.BeNotFuncCheckBecauseUseCallform.Text);
-			foreach (FunctionLabelLine label in labelList)
+			// 本体解析は初回呼び出しまで遅延する（EnsureParsed）。呼ばれない関数まで
+			// ここで解析すると、数千スクリプトの作品では起動が数秒伸びるだけだった。
+			if (Program.AnalysisMode)
 			{
-				if (label.Depth != labelDepth)
-					continue;
-				// 並列版では深さ 0 の解析が終わった時点で useCallForm が立ち得る。
-				// 逐次版と同じく、まだ解析していない関数をここで解析する。
-				if (parallelParse && !parsedLabels.Add(label))
-					continue;
-				ParseFunctionWithCatch(label);
+				foreach (FunctionLabelLine label in labelList)
+				{
+					if (label.Depth != labelDepth)
+						continue;
+					if (parallelParse && !parsedLabels.Add(label))
+						continue;
+					ParseFunctionWithCatch(label);
+				}
 			}
 		}
 		else
@@ -836,12 +857,7 @@ internal sealed class ErbLoader
 					ignoredFNCWarningCount++;
 				else
 					ParserMediator.Warn(string.Format(trerror.FuncNeverCalled.Text, label.LabelName), label, 1, false, false);
-				if (!ignoreUncalledFunction)
-				{
-					if (!parallelParse || parsedLabels.Add(label))
-						ParseFunctionWithCatch(label);
-				}
-				else
+				if (ignoreUncalledFunction)
 				{
 					if (!(label.NextLine is NullLine) && !(label.NextLine is FunctionLabelLine))
 					{
@@ -852,6 +868,9 @@ internal sealed class ErbLoader
 						}
 					}
 				}
+				// ignoreUncalledFunction でない場合も、ここでは解析しない。
+				// 実際に呼ばれた時点で EnsureParsed が解析する（呼ばれない関数が
+				// 10 万件ある作品では、この一括解析が起動時間の大半を占めていた）。
 			}
 		}
 		if (Program.BootProfile)
@@ -974,6 +993,10 @@ internal sealed class ErbLoader
 
 	private void ParseFunctionWithCatch(FunctionLabelLine label)
 	{//ここでエラーを捕まえることは本来はないはず。ExeEE相当。
+		if (label.BodyParsed)
+			return;
+		// 解析中に自分自身（や相互参照）を EnsureParsed しても再帰しないよう、先に印を付ける。
+		label.BodyParsed = true;
 		try
 		{
 			setArgument(label);

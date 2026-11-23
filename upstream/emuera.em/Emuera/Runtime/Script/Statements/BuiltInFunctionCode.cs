@@ -44,6 +44,11 @@ enum FunctionCode
 	INPUTS,//文字列入力。入力はRESULTSへ。
 	TINPUT,
 	TINPUTS,
+	// Skia/EM+EE の NF (NoFocus) 付き入力。待機中に画面を最下部へ引き戻さない。
+	// eraTW の動く地図は TINPUTSNF のタイムアウトで毎フレーム描き直しているので、
+	// これが無いと「TINPUTSNF を解釈できない」でループごと止まる。
+	TINPUTNF,
+	TINPUTSNF,
 	TWAIT,
 	WAITANYKEY,
 	FORCEWAIT,//スキップで省略できないWAIT、強制TWAITと違い、スキップを打ち切る
@@ -51,6 +56,8 @@ enum FunctionCode
 	ONEINPUTS,
 	TONEINPUT,
 	TONEINPUTS,
+	TONEINPUTNF,
+	TONEINPUTSNF,
 	AWAIT,//入力不可 DoEvents
 
 	DRAWLINE,//画面の左端から右端まで----と線を引く。

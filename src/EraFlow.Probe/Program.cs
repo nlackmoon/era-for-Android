@@ -32,7 +32,7 @@ if(args[0] is "probe" or "auto"){
   }
  }
  WaitForPrompt();
- engine.EnsureRendered();steps.Add(new{input="<launch>",error=engine.IsError,mode=engine.InputMode.ToString(),scroll=new{value=engine.ScrollState.Value,max=engine.ScrollState.Max},size=engine.ClientSize,hash=Convert.ToHexString(SHA256.HashData(engine.RenderPng())),choices=engine.GetSelectableChoices(),lines=engine.GetDisplayLines().TakeLast(30).ToArray()});
+ engine.EnsureRendered();steps.Add(new{input="<launch>",error=engine.IsError,mode=engine.InputMode.ToString(),scroll=new{value=engine.ScrollState.Value,max=engine.ScrollState.Max},size=engine.ClientSize,hash=Convert.ToHexString(SHA256.HashData(engine.RenderPng())),choices=engine.GetSelectableChoices(),head=engine.GetDisplayLines().Take(400).ToArray(),lines=engine.GetDisplayLines().TakeLast(30).ToArray()});
  IEnumerable<string> Inputs(){
   if(args[0]=="probe"){foreach(var s in args.Skip(2))yield return s;yield break;}
   var visits=new Dictionary<string,int>();

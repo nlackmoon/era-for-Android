@@ -445,6 +445,8 @@ internal sealed class ProcessState
 
 	public void IntoFunction(CalledFunction call, UserDefinedFunctionArgument srcArgs, ExpressionMediator exm)
 	{
+		// 呼ばれなかった関数の本体は、実際に入る直前に解析する。
+		Loader.ErbLoader.EnsureParsed(call.TopLabel);
 
 		if (call.IsEvent)
 		{

@@ -492,6 +492,10 @@ namespace MinorShift.Emuera.WebHost
 				case "/screen.png":
 					return HttpResponse.Png(GetScreenPng());
 
+				// 左メニューの「查看日志」。ゲーム自身が出す emuera.log をそのまま返す
+				case "/log":
+					return HttpResponse.Text(ReadGameLog());
+
 				case "/status":
 					lock (gate)
 					{
@@ -563,9 +567,32 @@ namespace MinorShift.Emuera.WebHost
 			}
 		}
 
-		byte[] GetScreenPng()
+		/// <summary>
+		/// ゲームフォルダの emuera.log の末尾を返す。全部返すと数 MB になることがあるので
+		/// 256KB で切る (画面側は等幅で表示するだけ)。
+		/// </summary>
+		string ReadGameLog()
 		{
-			lock (gate)
+			try
+			{
+				string path = Path.Combine(GameDir, "emuera.log");
+				if (!File.Exists(path))
+					return "（还没有日志。发生错误后游戏才会写 emuera.log）";
+				using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+				int take = (int)Math.Min(fs.Length, 256 * 1024);
+				fs.Seek(-take, SeekOrigin.End);
+				var buffer = new byte[take];
+				int read = fs.Read(buffer, 0, take);
+				return Encoding.UTF8.GetString(buffer, 0, read);
+			}
+			catch (Exception ex)
+			{
+				return "读取日志失败：" + ex.Message;
+			}
+		}
+
+		byte[] GetScreenPng()
+		{			lock (gate)
 			{
 				if (engine == null)
 					return [];
@@ -651,7 +678,7 @@ namespace MinorShift.Emuera.WebHost
 
 				// スクリプトを走らせうる操作は、gate を取る前に「処理中」を伝える。
 				// 実行中は受信スレッドごと止まるので、ここを逃すと言う機会が無い
-				if (type is "click" or "submit" or "enter" or "skip" or "skipall")
+				if (type is "click" or "submit" or "enter" or "skip" or "skipall" or "title")
 					SendBusy();
 
 				var waited = Stopwatch.StartNew();
@@ -694,6 +721,20 @@ namespace MinorShift.Emuera.WebHost
 
 						case "latest":
 							changed = engine.ScrollToLatest();
+							break;
+
+						// 全文/ログ/設定を閉じたときに 1 枚だけ焼き直す。
+						// それらの表示中は画面側がフレームを捨てているので、
+						// 世代が進んでいないと復帰後も古い絵のままになる
+						case "refresh":
+							changed = true;
+							break;
+
+						// 左メニューの「返回标题界面」。上流のメニューと同じ経路で
+						// タイトル画面の入力待ちまで戻す
+						case "title":
+							engine.GoToTitle();
+							changed = true;
 							break;
 
 						case "submit":

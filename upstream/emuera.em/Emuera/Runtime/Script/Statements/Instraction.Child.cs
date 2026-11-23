@@ -1125,13 +1125,15 @@ internal sealed partial class FunctionIdentifier
 
 	private sealed class TINPUT_Instruction : AInstruction
 	{
-		public TINPUT_Instruction(bool oneInput)
+		public TINPUT_Instruction(bool oneInput, bool noFocus = false)
 		{
 			ArgBuilder = ArgumentParser.GetArgumentBuilder(FunctionArgType.SP_TINPUT);
 			flag = IS_PRINT | IS_INPUT | EXTENDED;
 			isOne = oneInput;
+			this.noFocus = noFocus;
 		}
 		bool isOne;
+		readonly bool noFocus;
 		public override void DoInstruction(ExpressionMediator exm, InstructionLine func, ProcessState state)
 		{
 			SpTInputsArgument tinputarg = (SpTInputsArgument)func.Argument;
@@ -1140,7 +1142,8 @@ internal sealed partial class FunctionIdentifier
 			{
 				InputType = InputType.IntValue,
 				HasDefValue = true,
-				OneInput = isOne
+				OneInput = isOne,
+				NoFocus = noFocus
 			};
 			long x = tinputarg.Time.GetIntValue(exm);
 			long y = tinputarg.Def.GetIntValue(exm);
@@ -1182,13 +1185,15 @@ internal sealed partial class FunctionIdentifier
 
 	private sealed class TINPUTS_Instruction : AInstruction
 	{
-		public TINPUTS_Instruction(bool oneInput)
+		public TINPUTS_Instruction(bool oneInput, bool noFocus = false)
 		{
 			ArgBuilder = ArgumentParser.GetArgumentBuilder(FunctionArgType.SP_TINPUTS);
 			flag = IS_PRINT | IS_INPUT | EXTENDED;
 			isOne = oneInput;
+			this.noFocus = noFocus;
 		}
 		bool isOne;
+		readonly bool noFocus;
 		public override void DoInstruction(ExpressionMediator exm, InstructionLine func, ProcessState state)
 		{
 			SpTInputsArgument tinputarg = (SpTInputsArgument)func.Argument;
@@ -1196,7 +1201,8 @@ internal sealed partial class FunctionIdentifier
 			{
 				InputType = InputType.StrValue,
 				HasDefValue = true,
-				OneInput = isOne
+				OneInput = isOne,
+				NoFocus = noFocus
 			};
 			long x = tinputarg.Time.GetIntValue(exm);
 			string strs = tinputarg.Def.GetStrValue(exm);

@@ -269,6 +269,12 @@ internal class FunctionLabelLine : LogicalLine, IComparable<FunctionLabelLine>
 	//public SingleTerm[] SubNames { get; set; }
 	public int Depth { get; set; }
 
+	/// <summary>
+	/// 本体（setArgument / nestCheck / setJumpTo）を解析済みか。
+	/// 呼ばれない関数は起動時には解析せず、初回呼び出しで解析する。
+	/// </summary>
+	internal bool BodyParsed { get; set; }
+
 	#region IComparable<FunctionLabelLine> メンバ
 	//ソート用情報
 	public int Index { get; set; }
